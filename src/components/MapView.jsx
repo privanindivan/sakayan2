@@ -55,7 +55,7 @@ export default function MapView({ markers, onMarkerClick, onMapClick, flyTo, add
       center={METRO_MANILA}
       zoom={DEFAULT_ZOOM}
       style={{ height: '100%', width: '100%' }}
-      zoomControl={true}
+      zoomControl={false}
       attributionControl={true}
     >
       <TileLayer
