@@ -1,0 +1,399 @@
+/* ============================================================
+   BASE RESET & LAYOUT
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+/* ============================================================
+   SEARCH BAR
+   ============================================================ */
+.search-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92vw, 480px);
+  z-index: 1000;
+}
+
+.search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 28px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.22);
+  padding: 0 12px;
+}
+
+.search-icon {
+  font-size: 16px;
+  margin-right: 8px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.search-input-wrap input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  padding: 13px 0;
+  background: transparent;
+}
+
+.search-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #999;
+  padding: 4px 6px;
+  flex-shrink: 0;
+}
+
+.search-loading {
+  background: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: #888;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.search-results {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  margin-top: 6px;
+  list-style: none;
+  overflow: hidden;
+}
+
+.search-results li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f2f2f2;
+  transition: background 0.15s;
+}
+
+.search-results li:last-child { border-bottom: none; }
+.search-results li:hover      { background: #f7f9ff; }
+
+.result-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+.result-text {
+  font-size: 13px;
+  color: #333;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* ============================================================
+   FLOATING ACTION BUTTON
+   ============================================================ */
+.fab {
+  position: absolute;
+  bottom: 32px;
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #1a73e8;
+  color: white;
+  font-size: 30px;
+  line-height: 1;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.fab:active      { transform: scale(0.93); }
+.fab-cancel      { background: #e53935; }
+.fab-cancel:hover { background: #c62828; }
+.fab:not(.fab-cancel):hover { background: #1557b0; }
+
+/* ============================================================
+   ADD MARKER FORM
+   ============================================================ */
+.add-form {
+  position: absolute;
+  bottom: 100px;
+  right: 16px;
+  width: min(320px, calc(100vw - 32px));
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  z-index: 1000;
+}
+
+.add-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.add-form-header h3 { font-size: 16px; font-weight: 600; }
+
+.form-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.hint {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+.add-form input,
+.add-form select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.add-form input:focus,
+.add-form select:focus { border-color: #1a73e8; }
+
+.coords-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.coords-row input { margin-bottom: 8px; }
+
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  background: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  margin-top: 4px;
+}
+
+.btn-primary:hover    { background: #1557b0; }
+.btn-primary:disabled { background: #b0c4e8; cursor: not-allowed; }
+
+/* ============================================================
+   MARKER MODAL
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.52);
+  z-index: 2000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fade-in 0.18s ease;
+}
+
+@media (min-width: 600px) {
+  .modal-overlay { align-items: center; }
+  .modal         { border-radius: 16px !important; }
+}
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  background: white;
+  width: min(480px, 100%);
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  position: relative;
+  max-height: 82vh;
+  overflow-y: auto;
+  animation: slide-up 0.22s ease;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.38);
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 15px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body  { padding: 16px 18px 20px; }
+
+.vehicle-badge {
+  display: inline-block;
+  color: white;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.modal-body h2 {
+  margin-top: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.coords-text {
+  color: #999;
+  font-size: 12px;
+  margin: 5px 0 14px;
+  font-family: monospace;
+}
+
+.edit-btn {
+  background: #f2f4f8;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a73e8;
+  transition: background 0.15s;
+}
+
+.edit-btn:hover { background: #e3eaf8; }
+
+/* ============================================================
+   IMAGE CAROUSEL
+   ============================================================ */
+.carousel {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  background: #e8e8e8;
+}
+
+.carousel img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.42);
+  color: white;
+  border: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  padding-bottom: 2px;
+}
+
+.carousel-btn:hover { background: rgba(0, 0, 0, 0.65); }
+.carousel-btn.prev  { left: 8px; }
+.carousel-btn.next  { right: 8px; }
+
+.carousel-dots {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.dot.active {
+  background: white;
+  transform: scale(1.25);
+}
+
+.carousel-counter {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.42);
+  color: white;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+/* ============================================================
+   LEAFLET OVERRIDES
+   ============================================================ */
+.leaflet-control-attribution { font-size: 10px; }
+
+/* Prevent Leaflet default icon path breakage with Vite */
+.leaflet-container { font-family: inherit; }
