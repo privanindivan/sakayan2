@@ -47,6 +47,7 @@ export default function AddMarkerForm({ pendingLatLng, onSubmit, onCancel }) {
           placeholder="Name (e.g. Quiapo Terminal)"
           value={name}
           onChange={e => setName(e.target.value)}
+          autoComplete="off"
           required
         />
 
@@ -56,19 +57,21 @@ export default function AddMarkerForm({ pendingLatLng, onSubmit, onCancel }) {
 
         <div className="coords-row">
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             placeholder="Latitude"
             value={lat}
             onChange={e => setLat(e.target.value)}
-            step="any"
+            readOnly={!!pendingLatLng}
             required
           />
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             placeholder="Longitude"
             value={lng}
             onChange={e => setLng(e.target.value)}
-            step="any"
+            readOnly={!!pendingLatLng}
             required
           />
         </div>

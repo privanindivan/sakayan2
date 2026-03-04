@@ -1,7 +1,13 @@
 /* ============================================================
    BASE RESET & LAYOUT
    ============================================================ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  /* Removes 300ms double-tap delay on all interactive elements */
+  touch-action: manipulation;
+}
 
 html, body, #root {
   height: 100%;
@@ -9,6 +15,8 @@ html, body, #root {
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  /* Extend into notch / home bar areas */
+  padding-top: env(safe-area-inset-top);
 }
 
 .app {
@@ -30,19 +38,19 @@ html, body, #root {
 }
 
 .search-input-wrap {
-  position: relative;
   display: flex;
   align-items: center;
   background: white;
   border-radius: 28px;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.22);
-  padding: 0 12px;
+  padding: 0 14px;
+  min-height: 50px; /* big enough for thumb tap */
 }
 
 .search-icon {
-  font-size: 16px;
+  font-size: 17px;
   margin-right: 8px;
-  opacity: 0.5;
+  opacity: 0.45;
   flex-shrink: 0;
 }
 
@@ -50,8 +58,9 @@ html, body, #root {
   flex: 1;
   border: none;
   outline: none;
-  font-size: 15px;
-  padding: 13px 0;
+  /* 16px minimum — prevents iOS Safari from zooming on focus */
+  font-size: 16px;
+  padding: 14px 0;
   background: transparent;
 }
 
@@ -59,18 +68,23 @@ html, body, #root {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
   color: #999;
-  padding: 4px 6px;
+  /* 44px tap target */
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
 .search-loading {
   background: white;
-  padding: 8px 16px;
+  padding: 10px 16px;
   border-radius: 8px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: 14px;
   color: #888;
   box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
@@ -86,21 +100,22 @@ html, body, #root {
 
 .search-results li {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
-  padding: 11px 14px;
+  /* 48px min height for comfortable touch */
+  min-height: 48px;
+  padding: 12px 16px;
   cursor: pointer;
-  border-bottom: 1px solid #f2f2f2;
-  transition: background 0.15s;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .search-results li:last-child { border-bottom: none; }
-.search-results li:hover      { background: #f7f9ff; }
+.search-results li:active     { background: #f0f5ff; }
 
-.result-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.result-icon { font-size: 15px; flex-shrink: 0; }
 
 .result-text {
-  font-size: 13px;
+  font-size: 14px;
   color: #333;
   line-height: 1.4;
   overflow: hidden;
@@ -114,43 +129,79 @@ html, body, #root {
    ============================================================ */
 .fab {
   position: absolute;
-  bottom: 32px;
-  right: 16px;
-  width: 56px;
-  height: 56px;
+  /* sit above the home bar on notched phones */
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  right: 20px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: #1a73e8;
   color: white;
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, transform 0.2s;
+  transition: background 0.2s, transform 0.15s;
 }
 
-.fab:active      { transform: scale(0.93); }
-.fab-cancel      { background: #e53935; }
-.fab-cancel:hover { background: #c62828; }
-.fab:not(.fab-cancel):hover { background: #1557b0; }
+.fab:active         { transform: scale(0.91); }
+.fab-cancel         { background: #e53935; }
+.fab-cancel:active  { background: #c62828; }
 
 /* ============================================================
-   ADD MARKER FORM
+   ADD MARKER — BOTTOM SHEET (mobile-first)
    ============================================================ */
 .add-form {
-  position: absolute;
-  bottom: 100px;
-  right: 16px;
-  width: min(320px, calc(100vw - 32px));
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: white;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
-  z-index: 1000;
+  border-radius: 20px 20px 0 0;
+  /* account for home bar */
+  padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: sheet-up 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* drag handle */
+.add-form::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+  margin: 12px auto 4px;
+}
+
+/* on larger screens keep it as a corner panel */
+@media (min-width: 600px) {
+  .add-form {
+    position: absolute;
+    bottom: calc(90px + env(safe-area-inset-bottom));
+    right: 20px;
+    left: auto;
+    width: 320px;
+    border-radius: 16px;
+    padding: 16px;
+    animation: none;
+    max-height: none;
+  }
+  .add-form::before { display: none; }
 }
 
 .add-form-header {
@@ -158,35 +209,46 @@ html, body, #root {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 4px;
+  padding-top: 4px;
 }
 
-.add-form-header h3 { font-size: 16px; font-weight: 600; }
+.add-form-header h3 { font-size: 17px; font-weight: 700; }
 
 .form-close {
-  background: none;
+  background: #f2f2f2;
   border: none;
   font-size: 16px;
-  color: #999;
+  color: #555;
   cursor: pointer;
-  padding: 4px 6px;
+  /* 44px tap target */
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hint {
-  font-size: 12px;
+  font-size: 13px;
   color: #888;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .add-form input,
 .add-form select {
   width: 100%;
-  padding: 10px 12px;
+  /* 16px prevents iOS zoom */
+  font-size: 16px;
+  padding: 13px 14px;
   border: 1.5px solid #e0e0e0;
-  border-radius: 10px;
-  font-size: 14px;
-  margin-bottom: 8px;
+  border-radius: 12px;
+  margin-bottom: 10px;
   outline: none;
+  /* full height for comfortable touch */
+  min-height: 50px;
   transition: border-color 0.2s;
+  background: white;
 }
 
 .add-form input:focus,
@@ -195,30 +257,31 @@ html, body, #root {
 .coords-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
 }
 
-.coords-row input { margin-bottom: 8px; }
+.coords-row input { margin-bottom: 10px; }
 
 .btn-primary {
   width: 100%;
-  padding: 12px;
+  padding: 15px;
   background: #1a73e8;
   color: white;
   border: none;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
+  min-height: 52px;
   transition: background 0.2s, opacity 0.2s;
   margin-top: 4px;
 }
 
-.btn-primary:hover    { background: #1557b0; }
+.btn-primary:active   { background: #1557b0; }
 .btn-primary:disabled { background: #b0c4e8; cursor: not-allowed; }
 
 /* ============================================================
-   MARKER MODAL
+   MARKER MODAL — BOTTOM SHEET
    ============================================================ */
 .modal-overlay {
   position: fixed;
@@ -231,57 +294,77 @@ html, body, #root {
   animation: fade-in 0.18s ease;
 }
 
-@media (min-width: 600px) {
-  .modal-overlay { align-items: center; }
-  .modal         { border-radius: 16px !important; }
-}
-
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
 
 .modal {
   background: white;
-  width: min(480px, 100%);
+  width: 100%;
   border-radius: 20px 20px 0 0;
   overflow: hidden;
   position: relative;
-  max-height: 82vh;
+  max-height: 85vh;
   overflow-y: auto;
-  animation: slide-up 0.22s ease;
+  animation: slide-up 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  /* home bar padding */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* drag handle */
+.modal::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+  margin: 12px auto 0;
 }
 
 @keyframes slide-up {
-  from { transform: translateY(40px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+  from { transform: translateY(50px); opacity: 0 }
+  to   { transform: translateY(0);    opacity: 1 }
+}
+
+/* centered dialog on tablet/desktop */
+@media (min-width: 600px) {
+  .modal-overlay { align-items: center; }
+  .modal {
+    width: min(480px, 92vw);
+    border-radius: 20px;
+    padding-bottom: 0;
+  }
+  .modal::before { display: none; }
 }
 
 .modal-close {
   position: absolute;
   top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.38);
+  right: 12px;
+  background: rgba(0, 0, 0, 0.35);
   color: white;
   border: none;
-  width: 32px;
-  height: 32px;
+  /* 44px tap target */
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 17px;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.modal-body  { padding: 16px 18px 20px; }
+.modal-body { padding: 14px 18px 20px; }
 
 .vehicle-badge {
   display: inline-block;
   color: white;
-  padding: 3px 12px;
+  padding: 4px 13px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
@@ -295,23 +378,26 @@ html, body, #root {
 .coords-text {
   color: #999;
   font-size: 12px;
-  margin: 5px 0 14px;
+  margin: 5px 0 16px;
   font-family: monospace;
 }
 
 .edit-btn {
-  background: #f2f4f8;
+  background: #f0f4ff;
   border: none;
-  padding: 10px 22px;
-  border-radius: 10px;
+  padding: 13px 24px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #1a73e8;
-  transition: background 0.15s;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.edit-btn:hover { background: #e3eaf8; }
+.edit-btn:active { background: #dce8ff; }
 
 /* ============================================================
    IMAGE CAROUSEL
@@ -319,7 +405,7 @@ html, body, #root {
 .carousel {
   position: relative;
   width: 100%;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #e8e8e8;
 }
@@ -329,6 +415,9 @@ html, body, #root {
   height: 100%;
   object-fit: cover;
   display: block;
+  /* smoother swipe feel */
+  pointer-events: none;
+  user-select: none;
 }
 
 .carousel-btn {
@@ -338,34 +427,35 @@ html, body, #root {
   background: rgba(0, 0, 0, 0.42);
   color: white;
   border: none;
-  width: 38px;
-  height: 38px;
+  /* 44px minimum touch target */
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 26px;
+  font-size: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s;
   padding-bottom: 2px;
 }
 
-.carousel-btn:hover { background: rgba(0, 0, 0, 0.65); }
-.carousel-btn.prev  { left: 8px; }
-.carousel-btn.next  { right: 8px; }
+.carousel-btn:active { background: rgba(0,0,0,0.7); }
+.carousel-btn.prev   { left: 8px; }
+.carousel-btn.next   { right: 8px; }
 
 .carousel-dots {
   position: absolute;
-  bottom: 8px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  /* 44px tap area via padding trick */
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.5);
   border: none;
@@ -376,24 +466,36 @@ html, body, #root {
 
 .dot.active {
   background: white;
-  transform: scale(1.25);
+  transform: scale(1.3);
 }
 
 .carousel-counter {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 10px;
+  right: 12px;
   background: rgba(0, 0, 0, 0.42);
   color: white;
   font-size: 12px;
-  padding: 2px 8px;
+  font-weight: 600;
+  padding: 3px 10px;
   border-radius: 12px;
 }
 
 /* ============================================================
-   LEAFLET OVERRIDES
+   LEAFLET OVERRIDES — mobile-friendly controls
    ============================================================ */
-.leaflet-control-attribution { font-size: 10px; }
+.leaflet-control-attribution {
+  font-size: 10px;
+  /* don't overlap home bar */
+  margin-bottom: env(safe-area-inset-bottom) !important;
+}
 
-/* Prevent Leaflet default icon path breakage with Vite */
+/* Bigger zoom buttons for fingers */
+.leaflet-control-zoom a {
+  width: 38px !important;
+  height: 38px !important;
+  line-height: 38px !important;
+  font-size: 20px !important;
+}
+
 .leaflet-container { font-family: inherit; }
