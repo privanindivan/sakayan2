@@ -399,17 +399,106 @@ html, body, #root {
 
 .edit-btn:active { background: #dce8ff; }
 
-.edit-name-input,
-.edit-type-select {
+.marker-details {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+}
+
+.edit-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.edit-field {
   width: 100%;
   font-size: 16px;
   padding: 12px 14px;
-  border: 1.5px solid #1a73e8;
+  border: 1.5px solid #e0e0e0;
   border-radius: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   outline: none;
   min-height: 50px;
   background: white;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.edit-field:focus { border-color: #1a73e8; }
+
+.edit-textarea {
+  resize: none;
+  min-height: 90px;
+  line-height: 1.5;
+}
+
+/* Photo grid */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.photo-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+.photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.55);
+  color: white;
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.photo-add {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 2px dashed #ccc;
+  background: #fafafa;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #aaa;
+  font-size: 24px;
+}
+.photo-add:active { background: #f0f0f0; }
+
+.photo-add-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .edit-actions {

@@ -17,6 +17,7 @@ export const INITIAL_MARKERS = [
     lng: 120.9843,
     type: 'Jeepney',
     name: 'Quiapo Terminal',
+    details: 'Major jeepney hub near Quiapo Church. Routes to Cubao, Divisoria, and Espana. Operates 5am–11pm.',
     images: [
       'https://placehold.co/480x240/FF6B35/white?text=Quiapo+Terminal',
       'https://placehold.co/480x240/FF6B35/white?text=Jeepney+Stop',
