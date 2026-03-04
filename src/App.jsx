@@ -5,6 +5,16 @@ import AddMarkerForm from './components/AddMarkerForm'
 import MarkerModal   from './components/MarkerModal'
 import { INITIAL_MARKERS } from './data/sampleData'
 
+// Returns the marker closest to a given {lat, lng} point
+function findNearest(point, markers) {
+  if (!markers.length) return point
+  return markers.reduce((best, m) => {
+    const d    = Math.hypot(m.lat - point.lat, m.lng - point.lng)
+    const dBest = Math.hypot(best.lat - point.lat, best.lng - point.lng)
+    return d < dBest ? m : best
+  })
+}
+
 export default function App() {
   const [markers,        setMarkers]        = useState(INITIAL_MARKERS)
   const [selectedMarker, setSelectedMarker] = useState(null)
@@ -16,9 +26,9 @@ export default function App() {
   const [locating,       setLocating]       = useState(false)
 
   const handleRoute = useCallback((from, to) => {
-    setFromPoint(from)
-    setToPoint(to)
-  }, [])
+    setFromPoint(findNearest(from, markers))
+    setToPoint(findNearest(to, markers))
+  }, [markers])
 
   const handleMapClick = useCallback((latlng) => {
     if (showForm) setPendingLatLng(latlng)
