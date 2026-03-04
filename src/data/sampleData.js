@@ -1,11 +1,11 @@
-export const VEHICLE_TYPES = ['Jeepney', 'Bus', 'UV Express', 'Tricycle', 'MRT/LRT', 'Ferry']
+export const VEHICLE_TYPES = ['Jeepney', 'Bus', 'UV Express', 'Tricycle', 'Train', 'Ferry']
 
 export const TYPE_COLORS = {
   Jeepney:      '#FF6B35',
   Bus:          '#4A90D9',
   'UV Express': '#27AE60',
   Tricycle:     '#F39C12',
-  'MRT/LRT':    '#8E44AD',
+  Train:        '#8E44AD',
   Ferry:        '#2980B9',
 }
 
@@ -64,7 +64,7 @@ export const INITIAL_MARKERS = [
     id: 5,
     lat: 14.5860,
     lng: 121.0569,
-    type: 'MRT/LRT',
+    type: 'Train',
     name: 'MRT-3 Ortigas Station',
     images: [
       'https://placehold.co/480x240/8E44AD/white?text=MRT+Ortigas',
@@ -76,7 +76,7 @@ export const INITIAL_MARKERS = [
     id: 6,
     lat: 14.6029,
     lng: 120.9826,
-    type: 'MRT/LRT',
+    type: 'Train',
     name: 'LRT-1 Doroteo Jose Station',
     images: [
       'https://placehold.co/480x240/8E44AD/white?text=LRT+Doroteo+Jose',
