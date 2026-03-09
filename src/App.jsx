@@ -1,22 +1,25 @@
-import { useState, useCallback } from 'react'
-import MapView       from './components/MapView'
-import SearchBar     from './components/SearchBar'
-import AddMarkerForm from './components/AddMarkerForm'
-import MarkerModal   from './components/MarkerModal'
+import { useState, useCallback, useEffect } from 'react'
+import MapView         from './components/MapView'
+import SearchBar       from './components/SearchBar'
+import AddMarkerForm   from './components/AddMarkerForm'
+import MarkerModal     from './components/MarkerModal'
+import DirectionPanel  from './components/DirectionPanel'
 import { INITIAL_MARKERS } from './data/sampleData'
 
-// Returns the marker closest to a given {lat, lng} point
-function findNearest(point, markers) {
-  if (!markers.length) return point
-  return markers.reduce((best, m) => {
-    const d    = Math.hypot(m.lat - point.lat, m.lng - point.lng)
-    const dBest = Math.hypot(best.lat - point.lat, best.lng - point.lng)
-    return d < dBest ? m : best
-  })
+function load(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
+  } catch { return fallback }
+}
+
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* quota exceeded */ }
 }
 
 export default function App() {
-  const [markers,        setMarkers]        = useState(INITIAL_MARKERS)
+  const [markers,        setMarkers]        = useState(() => load('sakayan_markers',     INITIAL_MARKERS))
+  const [connections,    setConnections]    = useState(() => load('sakayan_connections', []))
   const [selectedMarker, setSelectedMarker] = useState(null)
   const [pendingLatLng,  setPendingLatLng]  = useState(null)
   const [showForm,       setShowForm]       = useState(false)
@@ -24,20 +27,61 @@ export default function App() {
   const [toPoint,        setToPoint]        = useState(null)
   const [userLocation,   setUserLocation]   = useState(null)
   const [locating,       setLocating]       = useState(false)
+  const [connectingFrom, setConnectingFrom] = useState(null)
+
+  // Auto-save whenever data changes
+  useEffect(() => { save('sakayan_markers',     markers)     }, [markers])
+  useEffect(() => { save('sakayan_connections', connections) }, [connections])
 
   const handleRoute = useCallback((from, to) => {
-    setFromPoint(findNearest(from, markers))
-    setToPoint(findNearest(to, markers))
-  }, [markers])
+    setFromPoint(from)
+    setToPoint(to)
+  }, [])
 
   const handleMapClick = useCallback((latlng) => {
     if (showForm) setPendingLatLng(latlng)
   }, [showForm])
 
+  const handleConnect = useCallback((fromId, toId) => {
+    setConnections(prev => {
+      const exists = prev.some(c =>
+        (c.fromId === fromId && c.toId === toId) ||
+        (c.fromId === toId   && c.toId === fromId)
+      )
+      if (exists) return prev
+      return [...prev, { id: `${fromId}-${toId}`, fromId, toId }]
+    })
+  }, [])
+
+  const handleDisconnect = useCallback((fromId, toId) => {
+    setConnections(prev => prev.filter(c =>
+      !((c.fromId === fromId && c.toId === toId) ||
+        (c.fromId === toId   && c.toId === fromId))
+    ))
+  }, [])
+
+  const handleRemoveConnection = useCallback((connId) => {
+    setConnections(prev => prev.filter(c => c.id !== connId))
+  }, [])
+
+  const handleStartConnect = useCallback((markerId) => {
+    setConnectingFrom(markerId)
+    setSelectedMarker(null)
+  }, [])
+
+  const handleCancelConnect = useCallback(() => {
+    setConnectingFrom(null)
+  }, [])
+
   const handleMarkerClick = useCallback((marker) => {
     if (showForm) return
+    if (connectingFrom !== null) {
+      if (connectingFrom !== marker.id) handleConnect(connectingFrom, marker.id)
+      setConnectingFrom(null)
+      return
+    }
     setSelectedMarker(marker)
-  }, [showForm])
+  }, [showForm, connectingFrom, handleConnect])
 
   const handleAddMarker = (data) => {
     setMarkers(prev => [...prev, { id: Date.now(), ...data }])
@@ -65,12 +109,16 @@ export default function App() {
 
   return (
     <div className="app">
-      <SearchBar onRoute={handleRoute} />
+      <SearchBar onRoute={handleRoute} markers={markers} />
 
       <MapView
         markers={markers}
+        connections={connections}
+        connectingFrom={connectingFrom}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
+        onRemoveConnection={handleRemoveConnection}
+        onCancelConnect={handleCancelConnect}
         fromPoint={fromPoint}
         toPoint={toPoint}
         userLocation={userLocation}
@@ -92,7 +140,7 @@ export default function App() {
           className={`icon-btn fab-btn ${showForm ? 'fab-cancel' : ''}`}
           onClick={() => {
             if (showForm) handleCancelForm()
-            else { setShowForm(true); setPendingLatLng(null) }
+            else { setShowForm(true); setPendingLatLng(null); setConnectingFrom(null) }
           }}
           aria-label={showForm ? 'Cancel' : 'Add stop'}
         >
@@ -108,14 +156,29 @@ export default function App() {
         />
       )}
 
+      {fromPoint && toPoint && (
+        <DirectionPanel
+          fromPoint={fromPoint}
+          toPoint={toPoint}
+          markers={markers}
+          connections={connections}
+          onClose={() => { setFromPoint(null); setToPoint(null) }}
+          onMarkerSelect={(m) => setSelectedMarker(m)}
+        />
+      )}
+
       {selectedMarker && (
         <MarkerModal
           marker={selectedMarker}
+          allMarkers={markers}
+          connections={connections}
           onClose={() => setSelectedMarker(null)}
           onSave={(updated) => {
             setMarkers(prev => prev.map(m => m.id === updated.id ? updated : m))
             setSelectedMarker(updated)
           }}
+          onDisconnect={handleDisconnect}
+          onStartConnect={handleStartConnect}
         />
       )}
     </div>

@@ -1,8 +1,46 @@
 import { useState, useEffect } from 'react'
-import { Polyline, Tooltip } from 'react-leaflet'
+import { Polyline, Tooltip, Popup } from 'react-leaflet'
 
-export default function RoadRoute({ route }) {
-  const [positions, setPositions] = useState(null) // null = loading
+// Double-layer polyline: white casing + colored line so routes pop against OSM tiles
+function StyledRoute({ positions, color, label, dashed = false, onRemove }) {
+  const dash = dashed ? '8 8' : undefined
+  return (
+    <>
+      {/* White casing underneath */}
+      <Polyline
+        positions={positions}
+        color="white"
+        weight={9}
+        opacity={0.9}
+        dashArray={dash}
+        interactive={false}
+      />
+      {/* Colored line on top — click opens remove popup */}
+      <Polyline
+        positions={positions}
+        color={color}
+        weight={5}
+        opacity={1}
+        dashArray={dash}
+      >
+        {label && <Tooltip sticky>{label}</Tooltip>}
+        {onRemove && (
+          <Popup className="remove-popup" closeButton={false}>
+            <div className="popup-remove-wrap">
+              {label && <span className="popup-route-label">{label}</span>}
+              <button className="popup-remove-btn" onClick={onRemove}>
+                Remove route
+              </button>
+            </div>
+          </Popup>
+        )}
+      </Polyline>
+    </>
+  )
+}
+
+export default function RoadRoute({ route, onRemove }) {
+  const [positions, setPositions] = useState(null)
 
   useEffect(() => {
     const coords = route.waypoints
@@ -15,38 +53,28 @@ export default function RoadRoute({ route }) {
       .then(r => r.json())
       .then(data => {
         const geom = data.routes?.[0]?.geometry?.coordinates
-        if (geom) {
-          setPositions(geom.map(([lng, lat]) => [lat, lng]))
-        } else {
-          setPositions(route.waypoints) // fallback
-        }
+        setPositions(geom ? geom.map(([lng, lat]) => [lat, lng]) : route.waypoints)
       })
-      .catch(() => setPositions(route.waypoints)) // fallback on network error
+      .catch(() => setPositions(route.waypoints))
   }, [route.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // While loading: show a faint dashed line between waypoints so the route area is visible
   if (!positions) {
     return (
-      <Polyline
+      <StyledRoute
         positions={route.waypoints}
         color={route.color}
-        weight={3}
-        opacity={0.3}
-        dashArray="6 8"
-      >
-        <Tooltip sticky>{route.label}</Tooltip>
-      </Polyline>
+        label={route.label}
+        dashed
+      />
     )
   }
 
   return (
-    <Polyline
+    <StyledRoute
       positions={positions}
       color={route.color}
-      weight={5}
-      opacity={0.85}
-    >
-      <Tooltip sticky>{route.label}</Tooltip>
-    </Polyline>
+      label={route.label}
+      onRemove={onRemove}
+    />
   )
 }

@@ -5,7 +5,7 @@ import {
 } from 'react-leaflet'
 import L from 'leaflet'
 import RoadRoute from './RoadRoute'
-import { SAMPLE_ROUTES, TYPE_COLORS } from '../data/sampleData'
+import { TYPE_COLORS } from '../data/sampleData'
 
 const METRO_MANILA = [14.5820, 121.0090]
 const DEFAULT_ZOOM = 13
@@ -18,6 +18,21 @@ function buildIcon(type) {
       <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${color}" stroke="white" stroke-width="1.5"/>
       <circle cx="12.5" cy="12.5" r="4.5" fill="white"/>
     </svg>`,
+    className: '', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+  })
+}
+
+// Connect-mode highlighted pin (pulsing ring)
+function buildConnectIcon(type) {
+  const color = TYPE_COLORS[type] || '#E74C3C'
+  return L.divIcon({
+    html: `<div style="position:relative;width:25px;height:41px">
+      <div style="position:absolute;top:-6px;left:-6px;width:37px;height:37px;border:3px solid ${color};border-radius:50%;animation:pulse-ring 1s infinite;opacity:.6"></div>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
+        <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${color}" stroke="white" stroke-width="2.5"/>
+        <circle cx="12.5" cy="12.5" r="4.5" fill="white"/>
+      </svg>
+    </div>`,
     className: '', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
   })
 }
@@ -101,7 +116,6 @@ function UserRoute({ fromPoint, toPoint }) {
 
   if (!fromPoint || !toPoint) return null
 
-  // dashed placeholder while loading
   if (!positions) {
     return (
       <Polyline
@@ -111,60 +125,97 @@ function UserRoute({ fromPoint, toPoint }) {
     )
   }
 
-  return <Polyline positions={positions} color="#6366F1" weight={5} opacity={0.9} />
+  return (
+    <>
+      <Polyline positions={positions} color="white" weight={9} opacity={0.9} interactive={false} />
+      <Polyline positions={positions} color="#6366F1" weight={5} opacity={1} />
+    </>
+  )
 }
 
 export default function MapView({
-  markers, onMarkerClick, onMapClick,
+  markers, connections, connectingFrom,
+  onMarkerClick, onMapClick, onRemoveConnection, onCancelConnect,
   fromPoint, toPoint, userLocation,
   addingMode, pendingLatLng,
 }) {
+  const connectingMarker = connectingFrom ? markers.find(m => m.id === connectingFrom) : null
+
   return (
-    <MapContainer
-      center={METRO_MANILA}
-      zoom={DEFAULT_ZOOM}
-      style={{ height: '100%', width: '100%' }}
-      zoomControl={false}
-      attributionControl={true}
-    >
-      <TileLayer
-        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
-        maxZoom={19}
-      />
+    <div style={{ position: 'relative', height: '100%', width: '100%' }}>
+      {/* Connect-mode banner */}
+      {connectingFrom && (
+        <div className="connect-mode-banner">
+          <span>Tap a stop to connect{connectingMarker ? ` to ${connectingMarker.name}` : ''}</span>
+          <button onClick={onCancelConnect}>✕ Cancel</button>
+        </div>
+      )}
 
-      {/* Sample routes */}
-      {SAMPLE_ROUTES.map(route => <RoadRoute key={route.id} route={route} />)}
-
-      {/* User's searched route */}
-      <UserRoute fromPoint={fromPoint} toPoint={toPoint} />
-
-      {/* Stop markers */}
-      {markers.map(marker => (
-        <Marker
-          key={marker.id}
-          position={[marker.lat, marker.lng]}
-          icon={buildIcon(marker.type)}
-          eventHandlers={{ click: () => onMarkerClick(marker) }}
+      <MapContainer
+        center={METRO_MANILA}
+        zoom={DEFAULT_ZOOM}
+        style={{ height: '100%', width: '100%' }}
+        zoomControl={false}
+        attributionControl={true}
+      >
+        <TileLayer
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+          maxZoom={19}
         />
-      ))}
 
-      {/* From / To pins */}
-      {fromPoint && <Marker position={[fromPoint.lat, fromPoint.lng]} icon={fromIcon} />}
-      {toPoint   && <Marker position={[toPoint.lat,   toPoint.lng]}   icon={toIcon}   />}
+        {/* User-defined connections between hubs */}
+        {connections.map(conn => {
+          const from = markers.find(m => m.id === conn.fromId)
+          const to   = markers.find(m => m.id === conn.toId)
+          if (!from || !to) return null
+          return (
+            <RoadRoute
+              key={conn.id}
+              route={{
+                id:        conn.id,
+                waypoints: [[from.lat, from.lng], [to.lat, to.lng]],
+                color:     TYPE_COLORS[from.type] || '#6366F1',
+                label:     `${from.name} → ${to.name}`,
+              }}
+              onRemove={() => onRemoveConnection(conn.id)}
+            />
+          )
+        })}
 
-      {/* User location */}
-      {userLocation && (
-        <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon} />
-      )}
+        {/* User's searched route */}
+        <UserRoute fromPoint={fromPoint} toPoint={toPoint} />
 
-      {/* Pending add-marker ghost pin */}
-      {addingMode && pendingLatLng && (
-        <Marker position={[pendingLatLng.lat, pendingLatLng.lng]} icon={pendingIcon} />
-      )}
+        {/* Stop markers — pulsing ring in connect mode */}
+        {markers.map(marker => (
+          <Marker
+            key={marker.id}
+            position={[marker.lat, marker.lng]}
+            icon={connectingFrom && marker.id !== connectingFrom
+              ? buildConnectIcon(marker.type)
+              : buildIcon(marker.type)
+            }
+            eventHandlers={{ click: () => onMarkerClick(marker) }}
+          />
+        ))}
 
-      <ClickHandler onMapClick={onMapClick} />
-      <MapController fromPoint={fromPoint} toPoint={toPoint} userLocation={userLocation} />
-    </MapContainer>
+        {/* From / To pins */}
+        {fromPoint && <Marker position={[fromPoint.lat, fromPoint.lng]} icon={fromIcon} />}
+        {toPoint   && <Marker position={[toPoint.lat,   toPoint.lng]}   icon={toIcon}   />}
+
+        {/* User location */}
+        {userLocation && (
+          <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon} />
+        )}
+
+        {/* Pending add-marker ghost pin */}
+        {addingMode && pendingLatLng && (
+          <Marker position={[pendingLatLng.lat, pendingLatLng.lng]} icon={pendingIcon} />
+        )}
+
+        <ClickHandler onMapClick={onMapClick} />
+        <MapController fromPoint={fromPoint} toPoint={toPoint} userLocation={userLocation} />
+      </MapContainer>
+    </div>
   )
 }

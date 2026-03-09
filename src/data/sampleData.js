@@ -98,35 +98,3 @@ export const INITIAL_MARKERS = [
   },
 ]
 
-// Routes defined as waypoints — RoadRoute fetches real road geometry from OSRM
-export const SAMPLE_ROUTES = [
-  {
-    id: 'r1',
-    waypoints: [
-      [14.5998, 120.9843], // Quiapo
-      [14.6049, 121.0090], // España / Sampaloc
-      [14.6188, 121.0509], // Cubao
-    ],
-    label: 'Jeepney — Quiapo to Cubao',
-    color: '#FF6B35',
-  },
-  {
-    id: 'r2',
-    waypoints: [
-      [14.6024, 120.9730], // Divisoria
-      [14.5790, 120.9830], // Ermita
-      [14.5535, 121.0197], // Makati Ayala
-    ],
-    label: 'Bus — Divisoria to Makati',
-    color: '#4A90D9',
-  },
-  {
-    id: 'r3',
-    waypoints: [
-      [14.5535, 121.0197], // Makati Ayala
-      [14.5499, 121.0508], // BGC
-    ],
-    label: 'UV Express — Makati to BGC',
-    color: '#27AE60',
-  },
-]

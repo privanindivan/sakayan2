@@ -8,7 +8,6 @@ function Lightbox({ images, startIndex, onClose }) {
   const prev = () => setCurrent(i => (i - 1 + images.length) % images.length)
   const next = () => setCurrent(i => (i + 1) % images.length)
 
-  // Close on Escape
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape')     onClose()
@@ -16,7 +15,6 @@ function Lightbox({ images, startIndex, onClose }) {
       if (e.key === 'ArrowRight') next()
     }
     document.addEventListener('keydown', onKey)
-    // Lock body scroll while open
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
@@ -77,12 +75,15 @@ function Lightbox({ images, startIndex, onClose }) {
 }
 
 export default function ImageCarousel({ images }) {
-  const [current,   setCurrent]   = useState(0)
-  const [lightbox,  setLightbox]  = useState(false)
+  const [current,  setCurrent]  = useState(0)
+  const [lightbox, setLightbox] = useState(false)
   const touchStartX = useRef(null)
 
-  const prev = () => setCurrent(i => (i - 1 + images.length) % images.length)
-  const next = () => setCurrent(i => (i + 1) % images.length)
+  const safeImages = images ?? []
+  const hasImages  = safeImages.length > 0
+
+  const prev = () => setCurrent(i => (i - 1 + safeImages.length) % safeImages.length)
+  const next = () => setCurrent(i => (i + 1) % safeImages.length)
 
   const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX }
   const onTouchEnd   = (e) => {
@@ -92,27 +93,34 @@ export default function ImageCarousel({ images }) {
     touchStartX.current = null
   }
 
+  if (!hasImages) {
+    return (
+      <div className="carousel carousel-empty">
+        <span className="carousel-no-photo">📷 No photos yet</span>
+      </div>
+    )
+  }
+
   return (
     <>
       <div
         className="carousel"
+        onClick={() => setLightbox(true)}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
+        style={{ cursor: 'zoom-in' }}
       >
-        {/* Tap image to open fullscreen */}
         <img
-          src={images[current]}
+          src={safeImages[current]}
           alt={`slide ${current + 1}`}
           draggable={false}
-          onClick={() => setLightbox(true)}
-          style={{ cursor: 'zoom-in' }}
         />
 
-        <button className="carousel-btn prev" onClick={prev} aria-label="Previous">&#8249;</button>
-        <button className="carousel-btn next" onClick={next} aria-label="Next">&#8250;</button>
+        <button className="carousel-btn prev" onClick={e => { e.stopPropagation(); prev() }} aria-label="Previous">&#8249;</button>
+        <button className="carousel-btn next" onClick={e => { e.stopPropagation(); next() }} aria-label="Next">&#8250;</button>
 
-        <div className="carousel-dots">
-          {images.map((_, i) => (
+        <div className="carousel-dots" onClick={e => e.stopPropagation()}>
+          {safeImages.map((_, i) => (
             <button
               key={i}
               className={`dot ${i === current ? 'active' : ''}`}
@@ -122,15 +130,12 @@ export default function ImageCarousel({ images }) {
           ))}
         </div>
 
-        <div className="carousel-counter">{current + 1} / {images.length}</div>
-
-        {/* Fullscreen hint */}
-        <div className="carousel-expand">&#x26F6;</div>
+        <div className="carousel-counter">{current + 1} / {safeImages.length}</div>
       </div>
 
       {lightbox && (
         <Lightbox
-          images={images}
+          images={safeImages}
           startIndex={current}
           onClose={() => setLightbox(false)}
         />

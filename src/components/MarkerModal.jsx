@@ -2,7 +2,12 @@ import { useEffect, useState, useRef } from 'react'
 import ImageCarousel from './ImageCarousel'
 import { TYPE_COLORS, VEHICLE_TYPES } from '../data/sampleData'
 
-export default function MarkerModal({ marker, onClose, onSave }) {
+const FB_PAGE = 'https://www.facebook.com/sakayan'
+
+export default function MarkerModal({
+  marker, allMarkers, connections,
+  onClose, onSave, onDisconnect, onStartConnect,
+}) {
   const [editing, setEditing] = useState(false)
   const [name,    setName]    = useState(marker.name)
   const [type,    setType]    = useState(marker.type)
@@ -10,13 +15,18 @@ export default function MarkerModal({ marker, onClose, onSave }) {
   const [images,  setImages]  = useState(marker.images)
   const fileInputRef = useRef(null)
 
+  // Compute connected markers
+  const connectedIds = connections
+    .filter(c => c.fromId === marker.id || c.toId === marker.id)
+    .map(c => c.fromId === marker.id ? c.toId : c.fromId)
+  const connectedMarkers = allMarkers.filter(m => connectedIds.includes(m.id))
+
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  // Read picked files as base64 and append to images
   const handleFilePick = (e) => {
     const files = Array.from(e.target.files)
     files.forEach(file => {
@@ -26,7 +36,6 @@ export default function MarkerModal({ marker, onClose, onSave }) {
       }
       reader.readAsDataURL(file)
     })
-    // reset input so same file can be re-picked
     e.target.value = ''
   }
 
@@ -55,7 +64,6 @@ export default function MarkerModal({ marker, onClose, onSave }) {
       <div className="modal" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Close">&#x2715;</button>
 
-        {/* Carousel always visible — shows current images */}
         <ImageCarousel images={images} />
 
         <div className="modal-body">
@@ -100,8 +108,6 @@ export default function MarkerModal({ marker, onClose, onSave }) {
                     >&#x2715;</button>
                   </div>
                 ))}
-
-                {/* Upload button */}
                 <button
                   className="photo-add"
                   onClick={() => fileInputRef.current?.click()}
@@ -112,7 +118,6 @@ export default function MarkerModal({ marker, onClose, onSave }) {
                 </button>
               </div>
 
-              {/* Hidden file input — accept images, allow camera on mobile */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -143,9 +148,55 @@ export default function MarkerModal({ marker, onClose, onSave }) {
               {details && (
                 <p className="marker-details">{details}</p>
               )}
-              <button className="edit-btn" onClick={() => setEditing(true)}>
-                &#9998; Edit
-              </button>
+
+              {/* Action row: Edit + Connect */}
+              <div className="modal-actions">
+                <button className="edit-btn" onClick={() => setEditing(true)}>
+                  &#9998; Edit
+                </button>
+                <button className="modal-connect-btn" onClick={() => onStartConnect(marker.id)}>
+                  + Connect
+                </button>
+              </div>
+
+              {/* Connections list */}
+              <div className="connect-section">
+                <span className="connect-label">Connected stops</span>
+                {connectedMarkers.length === 0 && (
+                  <p className="connect-empty">No connections yet</p>
+                )}
+                {connectedMarkers.length > 0 && (
+                  <div className="connect-list">
+                    {connectedMarkers.map(m => (
+                      <div key={m.id} className="connect-item">
+                        <span
+                          className="vehicle-badge-sm"
+                          style={{ background: TYPE_COLORS[m.type] || '#888' }}
+                        >
+                          {m.type}
+                        </span>
+                        <span className="connect-name">{m.name}</span>
+                        {/* Suggest in-between stop → FB */}
+                        <a
+                          className="suggest-btn"
+                          href={`${FB_PAGE}?text=${encodeURIComponent(
+                            `Suggest stop between ${marker.name} and ${m.name}`
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Suggest in-between stop"
+                          aria-label="Suggest stop"
+                        >&#x1F4AC;</a>
+                        <button
+                          className="connect-remove"
+                          onClick={() => onDisconnect(marker.id, m.id)}
+                          aria-label="Disconnect"
+                        >&#x2715;</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
