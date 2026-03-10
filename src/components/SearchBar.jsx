@@ -23,7 +23,7 @@ function getMyLocation() {
   })
 }
 
-// Filter custom markers by name query (case-insensitive); empty query returns all
+// Empty query shows all markers; typed query filters by name
 function matchMarkers(markers, query) {
   if (!query.trim()) return markers
   const q = query.toLowerCase()
@@ -36,45 +36,44 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
 
   const [fromQuery,   setFromQuery]   = useState('')
   const [toQuery,     setToQuery]     = useState('')
-  const [fromResults, setFromResults] = useState([]) // Nominatim only
+  const [fromResults, setFromResults] = useState([])
   const [toResults,   setToResults]   = useState([])
-  const [fromFocused, setFromFocused] = useState(false)
-  const [toFocused,   setToFocused]   = useState(false)
+  // Single active-field tracker avoids the 150ms blur race that made both fields respond at once
+  const [activeField, setActiveField] = useState(null) // 'from' | 'to' | null
   const [fromPoint,   setFromPoint]   = useState(null)
   const [toPoint,     setToPoint]     = useState(null)
   const [locating,    setLocating]    = useState(false)
   const fromDebounce = useRef(null)
   const toDebounce   = useRef(null)
 
+  // Sync to App: start route when both confirmed, clear route when either is missing
   useEffect(() => {
     if (fromPoint && toPoint) onRoute(fromPoint, toPoint)
+    else onRoute(null, null)
   }, [fromPoint, toPoint]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Build combined dropdown items for a field
   function buildDropdown(query, nominatimResults, isFrom) {
     const items = []
-    // My location — only for From field
     if (isFrom) items.push({ kind: 'myloc' })
-    // Custom terminals matching the query
     matchMarkers(markers, query).forEach(m => items.push({ kind: 'marker', marker: m }))
-    // Nominatim results
     nominatimResults.forEach(r => items.push({ kind: 'place', result: r }))
     return items
   }
 
-  const selectPoint = (point, setQuery, setPoint, ref) => {
-    setQuery(point.name)
+  const selectPoint = (point, isFrom) => {
+    if (isFrom) { setFromQuery(point.name); setFromPoint(point) }
+    else        { setToQuery(point.name);   setToPoint(point)   }
     setFromResults([])
     setToResults([])
-    setFromFocused(false)
-    setToFocused(false)
-    ref.current?.blur()
-    setPoint(point)
+    setActiveField(null)
+    ;(isFrom ? fromRef : toRef).current?.blur()
     onFlyTo?.({ lat: point.lat, lng: point.lng })
   }
 
+  // Editing text always clears the saved point — prevents stale route triggers
   const handleFromChange = (e) => {
     setFromQuery(e.target.value)
+    setFromPoint(null)
     clearTimeout(fromDebounce.current)
     fromDebounce.current = setTimeout(async () => {
       setFromResults(await fetchPlaces(e.target.value))
@@ -83,27 +82,28 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
 
   const handleToChange = (e) => {
     setToQuery(e.target.value)
+    setToPoint(null)
     clearTimeout(toDebounce.current)
     toDebounce.current = setTimeout(async () => {
       setToResults(await fetchPlaces(e.target.value))
     }, 400)
   }
 
-  const handleItemSelect = async (item, setQuery, setPoint, ref) => {
+  const handleItemSelect = async (item, isFrom) => {
     if (item.kind === 'myloc') {
       setLocating(true)
       try {
         const pt = await getMyLocation()
-        selectPoint(pt, setQuery, setPoint, ref)
+        selectPoint(pt, isFrom)
       } catch { /* denied */ } finally { setLocating(false) }
     } else if (item.kind === 'marker') {
       const m = item.marker
-      selectPoint({ lat: m.lat, lng: m.lng, name: m.name }, setQuery, setPoint, ref)
+      selectPoint({ lat: m.lat, lng: m.lng, name: m.name }, isFrom)
     } else {
       const r = item.result
       selectPoint(
         { lat: parseFloat(r.lat), lng: parseFloat(r.lon), name: r.display_name.split(',')[0] },
-        setQuery, setPoint, ref
+        isFrom
       )
     }
   }
@@ -111,12 +111,7 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
   const handleKeyDown = async (e, query, results, isFrom) => {
     if (e.key !== 'Enter') return
     e.preventDefault()
-    const setQuery = isFrom ? setFromQuery : setToQuery
-    const setPoint = isFrom ? setFromPoint : setToPoint
-    const ref      = isFrom ? fromRef      : toRef
-    const setRes   = isFrom ? setFromResults : setToResults
-
-    // Build combined items and pick first non-myloc
+    const setRes = isFrom ? setFromResults : setToResults
     clearTimeout(isFrom ? fromDebounce.current : toDebounce.current)
     let nomResults = results
     if (!nomResults.length && query.trim()) {
@@ -125,18 +120,22 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
     }
     const items = buildDropdown(query, nomResults, isFrom)
     const first = items.find(i => i.kind !== 'myloc')
-    if (first) handleItemSelect(first, setQuery, setPoint, ref)
+    if (first) handleItemSelect(first, isFrom)
   }
 
   const handleSwap = () => {
-    const tq = toQuery; setFromQuery(tq); setToQuery(fromQuery)
-    const tp = toPoint; setFromPoint(tp); setToPoint(fromPoint)
+    const tq = toQuery;  setFromQuery(tq);  setToQuery(fromQuery)
+    const tp = toPoint;  setFromPoint(tp);  setToPoint(fromPoint)
   }
 
-  const fromDropdown = fromFocused ? buildDropdown(fromQuery, fromResults, true)  : []
-  const toDropdown   = toFocused   ? buildDropdown(toQuery,   toResults,   false) : []
-  const activeDropdown = fromDropdown.length ? fromDropdown : toDropdown
-  const isFromActive   = fromDropdown.length > 0
+  const isFrom       = activeField === 'from'
+  const activeDropdown = activeField
+    ? buildDropdown(
+        isFrom ? fromQuery : toQuery,
+        isFrom ? fromResults : toResults,
+        isFrom
+      )
+    : []
 
   return (
     <div className="search-bar">
@@ -150,8 +149,8 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
             placeholder="Where from?"
             value={fromQuery}
             onChange={handleFromChange}
-            onFocus={() => setFromFocused(true)}
-            onBlur={() => setTimeout(() => setFromFocused(false), 150)}
+            onFocus={() => setActiveField('from')}
+            onBlur={() => setTimeout(() => setActiveField(f => f === 'from' ? null : f), 150)}
             onKeyDown={e => handleKeyDown(e, fromQuery, fromResults, true)}
             autoComplete="off"
             autoCorrect="off"
@@ -173,8 +172,8 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
             placeholder="Where to?"
             value={toQuery}
             onChange={handleToChange}
-            onFocus={() => setToFocused(true)}
-            onBlur={() => setTimeout(() => setToFocused(false), 150)}
+            onFocus={() => setActiveField('to')}
+            onBlur={() => setTimeout(() => setActiveField(f => f === 'to' ? null : f), 150)}
             onKeyDown={e => handleKeyDown(e, toQuery, toResults, false)}
             autoComplete="off"
             autoCorrect="off"
@@ -186,15 +185,11 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
       {/* Dropdown */}
       {activeDropdown.length > 0 && (
         <ul className="search-results" role="listbox">
-          {activeDropdown.map((item, i) => {
+          {activeDropdown.map((item) => {
             if (item.kind === 'myloc') return (
               <li
                 key="myloc"
-                onMouseDown={() => handleItemSelect(item,
-                  isFromActive ? setFromQuery : setToQuery,
-                  isFromActive ? setFromPoint : setToPoint,
-                  isFromActive ? fromRef      : toRef
-                )}
+                onMouseDown={() => handleItemSelect(item, true)}
                 role="option"
                 className="result-myloc"
               >
@@ -207,17 +202,10 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
               return (
                 <li
                   key={`m-${item.marker.id}`}
-                  onMouseDown={() => handleItemSelect(item,
-                    isFromActive ? setFromQuery : setToQuery,
-                    isFromActive ? setFromPoint : setToPoint,
-                    isFromActive ? fromRef      : toRef
-                  )}
+                  onMouseDown={() => handleItemSelect(item, isFrom)}
                   role="option"
                 >
-                  <span
-                    className="result-icon result-pin"
-                    style={{ color }}
-                  >&#128205;</span>
+                  <span className="result-icon result-pin" style={{ color }}>&#128205;</span>
                   <div className="result-text">
                     <span className="result-terminal-name">{item.marker.name}</span>
                     <span className="result-terminal-type" style={{ color }}>{item.marker.type}</span>
@@ -225,15 +213,10 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
                 </li>
               )
             }
-            // Nominatim place
             return (
               <li
                 key={item.result.place_id}
-                onMouseDown={() => handleItemSelect(item,
-                  isFromActive ? setFromQuery : setToQuery,
-                  isFromActive ? setFromPoint : setToPoint,
-                  isFromActive ? fromRef      : toRef
-                )}
+                onMouseDown={() => handleItemSelect(item, isFrom)}
                 role="option"
               >
                 <span className="result-icon">&#127759;</span>
