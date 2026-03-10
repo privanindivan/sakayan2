@@ -29,10 +29,18 @@ export default function App() {
   const [locating,       setLocating]       = useState(false)
   const [connectingFrom, setConnectingFrom] = useState(null)
   const [flyTarget,      setFlyTarget]      = useState(null)
+  const [searchResetKey, setSearchResetKey] = useState(0)
 
   // Auto-save whenever data changes
   useEffect(() => { save('sakayan_markers',     markers)     }, [markers])
   useEffect(() => { save('sakayan_connections', connections) }, [connections])
+
+  // Auto-clear flyTarget after fly animation completes so the pin doesn't linger
+  useEffect(() => {
+    if (!flyTarget) return
+    const t = setTimeout(() => setFlyTarget(null), 1500)
+    return () => clearTimeout(t)
+  }, [flyTarget])
 
   const handleRoute = useCallback((from, to) => {
     setFromPoint(from)
@@ -44,6 +52,7 @@ export default function App() {
   }, [showForm])
 
   const handleConnect = useCallback((fromId, toId) => {
+    if (fromId === toId) return  // prevent self-loops
     setConnections(prev => {
       const exists = prev.some(c =>
         (c.fromId === fromId && c.toId === toId) ||
@@ -110,7 +119,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <SearchBar onRoute={handleRoute} onFlyTo={(t) => setFlyTarget(t)} markers={markers} />
+      <SearchBar onRoute={handleRoute} onFlyTo={(t) => setFlyTarget(t)} markers={markers} resetKey={searchResetKey} />
 
       <MapView
         markers={markers}
@@ -164,7 +173,7 @@ export default function App() {
           toPoint={toPoint}
           markers={markers}
           connections={connections}
-          onClose={() => { setFromPoint(null); setToPoint(null) }}
+          onClose={() => { setFromPoint(null); setToPoint(null); setSearchResetKey(k => k + 1) }}
           onMarkerSelect={(m) => setSelectedMarker(m)}
         />
       )}

@@ -30,7 +30,7 @@ function matchMarkers(markers, query) {
   return markers.filter(m => m.name.toLowerCase().includes(q))
 }
 
-export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
+export default function SearchBar({ onRoute, onFlyTo, markers = [], resetKey = 0 }) {
   const fromRef = useRef(null)
   const toRef   = useRef(null)
 
@@ -46,11 +46,28 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
   const fromDebounce = useRef(null)
   const toDebounce   = useRef(null)
 
+  // Clear all local state when App externally resets the route (e.g. DirectionPanel close)
+  useEffect(() => {
+    if (resetKey === 0) return
+    setFromQuery(''); setToQuery('')
+    setFromPoint(null); setToPoint(null)
+    setFromResults([]); setToResults([])
+    setActiveField(null)
+  }, [resetKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sync to App: start route when both confirmed, clear route when either is missing
   useEffect(() => {
     if (fromPoint && toPoint) onRoute(fromPoint, toPoint)
     else onRoute(null, null)
   }, [fromPoint, toPoint]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clean up debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(fromDebounce.current)
+      clearTimeout(toDebounce.current)
+    }
+  }, [])
 
   function buildDropdown(query, nominatimResults, isFrom) {
     const items = []
@@ -124,8 +141,9 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [] }) {
   }
 
   const handleSwap = () => {
-    const tq = toQuery;  setFromQuery(tq);  setToQuery(fromQuery)
-    const tp = toPoint;  setFromPoint(tp);  setToPoint(fromPoint)
+    const tq = toQuery;     setFromQuery(tq);     setToQuery(fromQuery)
+    const tp = toPoint;     setFromPoint(tp);     setToPoint(fromPoint)
+    const tr = toResults;   setFromResults(tr);   setToResults(fromResults)
   }
 
   const isFrom       = activeField === 'from'
