@@ -118,7 +118,20 @@ export default function DirectionPanel({ fromPoint, toPoint, markers, connection
         <button className="dir-close" onClick={onClose} aria-label="Close">&#x2715;</button>
       </div>
 
-      {/* Route count label — always shown when routes exist */}
+      {/* Snapped stops + route count */}
+      {nearFrom && nearTo && (
+        <div className="dir-snap-row">
+          <span className="dir-snap-stop"
+            style={{ borderColor: TYPE_COLORS[nearFrom.type] || '#888' }}>
+            {nearFrom.name}
+          </span>
+          <span className="dir-snap-arrow">→</span>
+          <span className="dir-snap-stop"
+            style={{ borderColor: TYPE_COLORS[nearTo.type] || '#888' }}>
+            {nearTo.name}
+          </span>
+        </div>
+      )}
       {paths && (
         <div className="route-count-label">
           {paths.length === 1

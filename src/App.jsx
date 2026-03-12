@@ -76,6 +76,12 @@ export default function App() {
     setConnections(prev => prev.filter(c => c.id !== connId))
   }, [])
 
+  const handleDeleteMarker = useCallback((markerId) => {
+    setMarkers(prev => prev.filter(m => m.id !== markerId))
+    setConnections(prev => prev.filter(c => c.fromId !== markerId && c.toId !== markerId))
+    setSelectedMarker(null)
+  }, [])
+
   const handleStartConnect = useCallback((markerId) => {
     setConnectingFrom(markerId)
     setSelectedMarker(null)
@@ -194,6 +200,7 @@ export default function App() {
             setMarkers(prev => prev.map(m => m.id === updated.id ? updated : m))
             setSelectedMarker(updated)
           }}
+          onDelete={handleDeleteMarker}
           onDisconnect={handleDisconnect}
           onStartConnect={handleStartConnect}
         />
