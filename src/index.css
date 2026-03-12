@@ -1270,102 +1270,171 @@ html, body, #root {
   text-align: center;
 }
 
-/* ── Route builder button ───────────────────────── */
-.route-mode-btn {
-  background: white;
-  color: #1a73e8;
-  font-size: 20px;
-  font-weight: 700;
-}
-.route-mode-btn.route-mode-active {
-  background: #1a73e8;
-  color: white;
-}
-
-/* ── Route-building mode banner ─────────────────── */
-.route-mode-banner {
-  background: #F59E0B;
-}
-
-/* ── Route panel stop rows ──────────────────────── */
-.dir-route-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #222;
-}
-
-.route-stop-row {
+/* ── Multiple route option cards ────────────────── */
+.route-options-row {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  gap: 8px;
+  padding: 10px 12px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.route-options-row::-webkit-scrollbar { display: none; }
 
-.route-stop-num {
+.route-option-card {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  color: white;
-  font-size: 11px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 1px;
-}
-
-.route-stop-info {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  min-width: 100px;
+  transition: border-color .15s, background .15s;
+}
+.route-option-card.route-option-active {
+  border-color: #1a73e8;
+  background: #e8f0fe;
 }
 
-.route-stop-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #222;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.route-seg-detail {
+.route-option-num {
   font-size: 12px;
+  font-weight: 700;
+  color: #1a73e8;
+}
+
+.route-option-stops {
+  font-size: 11px;
   color: #888;
 }
 
-/* ── Route summary ──────────────────────────────── */
-.route-summary {
-  margin: 8px 16px;
-  border-radius: 10px;
-  background: #f8f9fa;
-  padding: 10px 14px;
+.route-option-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.rt-chip {
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.route-option-fare {
+  font-size: 12px;
+  font-weight: 700;
+  color: #27AE60;
+  margin-top: 2px;
+}
+
+/* ── Fare badge in direction step ───────────────── */
+.dir-step-fare {
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* ── Marker meta row (fare + schedule badges) ───── */
+.marker-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.marker-fare-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #27AE60;
+  background: #e8f9ef;
+  border-radius: 8px;
+  padding: 3px 10px;
+}
+
+.marker-sched-badge {
+  font-size: 12px;
+  color: #555;
+  background: #f2f2f2;
+  border-radius: 8px;
+  padding: 3px 10px;
+}
+
+/* ── Fare input ──────────────────────────────────── */
+.fare-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.fare-prefix {
+  font-size: 16px;
+  font-weight: 600;
+  color: #555;
+  line-height: 1;
+  margin-right: 2px;
+}
+
+.fare-input {
+  flex: 1;
+  margin-bottom: 0 !important;
+}
+
+/* ── Schedule time pickers ───────────────────────── */
+.time-range-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.time-field {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
-.route-summary-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #555;
-}
-
-.route-fare-row {
+.time-label {
+  font-size: 11px;
   font-weight: 600;
-  color: #1a73e8;
-  font-size: 14px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 
-.route-clear-btn {
-  margin: 4px 12px 12px;
-  width: calc(100% - 24px);
-  text-align: center;
+.time-input {
+  margin-bottom: 0 !important;
+  font-size: 14px !important;
+}
+
+/* ── Custom day toggle buttons ───────────────────── */
+.day-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.day-check-btn {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #d0d0d0;
+  background: white;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition: all .12s;
+}
+.day-check-btn.active {
+  background: #1a73e8;
+  border-color: #1a73e8;
+  color: white;
 }
 
 /* ── PIN modal ──────────────────────────────────── */

@@ -10,7 +10,6 @@ import { TYPE_COLORS } from '../data/sampleData'
 const METRO_MANILA = [14.5820, 121.0090]
 const DEFAULT_ZOOM = 13
 
-// Colored pin per vehicle type
 function buildIcon(type) {
   const color = TYPE_COLORS[type] || '#E74C3C'
   return L.divIcon({
@@ -22,7 +21,6 @@ function buildIcon(type) {
   })
 }
 
-// Connect-mode highlighted pin (pulsing ring)
 function buildConnectIcon(type) {
   const color = TYPE_COLORS[type] || '#E74C3C'
   return L.divIcon({
@@ -37,22 +35,6 @@ function buildConnectIcon(type) {
   })
 }
 
-// Numbered pin for manual route building
-function buildRouteIcon(type, num) {
-  const color = TYPE_COLORS[type] || '#E74C3C'
-  return L.divIcon({
-    html: `<div style="position:relative;width:34px;height:41px">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41" style="position:absolute;left:0;top:0">
-        <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${color}" stroke="white" stroke-width="1.5"/>
-        <circle cx="12.5" cy="12.5" r="4.5" fill="white"/>
-      </svg>
-      <div style="position:absolute;top:-7px;right:0;background:#1a73e8;color:#fff;border-radius:8px;padding:0 4px;font-size:10px;font-weight:700;line-height:15px;border:1.5px solid #fff;min-width:14px;text-align:center">${num}</div>
-    </div>`,
-    className: '', iconSize: [34, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
-  })
-}
-
-// From pin (green)
 const fromIcon = L.divIcon({
   html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
     <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#22C55E" stroke="white" stroke-width="1.5"/>
@@ -61,7 +43,6 @@ const fromIcon = L.divIcon({
   className: '', iconSize: [25, 41], iconAnchor: [12, 41],
 })
 
-// To pin (red)
 const toIcon = L.divIcon({
   html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
     <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#EF4444" stroke="white" stroke-width="1.5"/>
@@ -70,13 +51,11 @@ const toIcon = L.divIcon({
   className: '', iconSize: [25, 41], iconAnchor: [12, 41],
 })
 
-// User location dot (blue pulsing)
 const userIcon = L.divIcon({
   html: `<div class="user-dot"><div class="user-pulse"></div></div>`,
   className: '', iconSize: [20, 20], iconAnchor: [10, 10],
 })
 
-// Map search result pin (purple)
 const searchIcon = L.divIcon({
   html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
     <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#6366F1" stroke="white" stroke-width="1.5"/>
@@ -85,7 +64,6 @@ const searchIcon = L.divIcon({
   className: '', iconSize: [25, 41], iconAnchor: [12, 41],
 })
 
-// Pending pin while adding
 const pendingIcon = L.divIcon({
   html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
     <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#888" stroke="white" stroke-width="1.5" stroke-dasharray="3 2"/>
@@ -99,7 +77,6 @@ function ClickHandler({ onMapClick }) {
   return null
 }
 
-// Fits map to show both from+to, or flies to userLocation/flyTarget
 function MapController({ fromPoint, toPoint, userLocation, flyTarget }) {
   const map = useMap()
 
@@ -113,21 +90,16 @@ function MapController({ fromPoint, toPoint, userLocation, flyTarget }) {
   }, [fromPoint, toPoint]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (userLocation) {
-      map.flyTo([userLocation.lat, userLocation.lng], 16, { duration: 1.2 })
-    }
+    if (userLocation) map.flyTo([userLocation.lat, userLocation.lng], 16, { duration: 1.2 })
   }, [userLocation]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (flyTarget) {
-      map.flyTo([flyTarget.lat, flyTarget.lng], 16, { duration: 1.2 })
-    }
-  }, [flyTarget]) // eslint-disable-line react-deps
+    if (flyTarget) map.flyTo([flyTarget.lat, flyTarget.lng], 16, { duration: 1.2 })
+  }, [flyTarget]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return null
 }
 
-// OSRM route between from and to
 function UserRoute({ fromPoint, toPoint }) {
   const [positions, setPositions] = useState(null)
 
@@ -145,7 +117,6 @@ function UserRoute({ fromPoint, toPoint }) {
   }, [fromPoint, toPoint])
 
   if (!fromPoint || !toPoint) return null
-
   if (!positions) {
     return (
       <Polyline
@@ -154,7 +125,6 @@ function UserRoute({ fromPoint, toPoint }) {
       />
     )
   }
-
   return (
     <>
       <Polyline positions={positions} color="white" weight={9} opacity={0.9} interactive={false} />
@@ -168,36 +138,15 @@ export default function MapView({
   onMarkerClick, onMapClick, onRemoveConnection, onCancelConnect,
   fromPoint, toPoint, userLocation, flyTarget,
   addingMode, pendingLatLng,
-  routeMode, routeStops, onCancelRouteMode,
 }) {
   const connectingMarker = connectingFrom ? markers.find(m => m.id === connectingFrom) : null
 
-  // Build a set of stop IDs and their positions in the route for quick lookup
-  const routeStopMap = new Map()
-  routeStops?.forEach((s, i) => {
-    // last position wins if same stop appears multiple times
-    routeStopMap.set(s.id, i + 1)
-  })
-
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
-      {/* Connect-mode banner */}
       {connectingFrom && (
         <div className="connect-mode-banner">
           <span>Tap a stop to connect{connectingMarker ? ` to ${connectingMarker.name}` : ''}</span>
           <button onClick={onCancelConnect}>✕ Cancel</button>
-        </div>
-      )}
-
-      {/* Route-building mode banner */}
-      {routeMode && !connectingFrom && (
-        <div className="connect-mode-banner route-mode-banner">
-          <span>
-            {routeStops?.length === 0
-              ? 'Tap stops in order to build your route'
-              : `${routeStops.length} stop${routeStops.length > 1 ? 's' : ''} — keep tapping to add more`}
-          </span>
-          <button onClick={onCancelRouteMode}>✕ Cancel</button>
         </div>
       )}
 
@@ -214,7 +163,6 @@ export default function MapView({
           maxZoom={19}
         />
 
-        {/* User-defined connections between hubs */}
         {connections.map(conn => {
           const from = markers.find(m => m.id === conn.fromId)
           const to   = markers.find(m => m.id === conn.toId)
@@ -233,56 +181,26 @@ export default function MapView({
           )
         })}
 
-        {/* User's searched route */}
         <UserRoute fromPoint={fromPoint} toPoint={toPoint} />
 
-        {/* Manual route polyline */}
-        {routeStops?.length >= 2 && (
-          <>
-            <Polyline
-              positions={routeStops.map(s => [s.lat, s.lng])}
-              color="white" weight={9} opacity={0.9} interactive={false}
-            />
-            <Polyline
-              positions={routeStops.map(s => [s.lat, s.lng])}
-              color="#F59E0B" weight={5} opacity={1} dashArray="10 5"
-            />
-          </>
-        )}
-
-        {/* Stop markers */}
-        {markers.map(marker => {
-          const routeNum = routeStopMap.get(marker.id)
-          const icon = routeNum
-            ? buildRouteIcon(marker.type, routeNum)
-            : connectingFrom && marker.id !== connectingFrom
+        {markers.map(marker => (
+          <Marker
+            key={marker.id}
+            position={[marker.lat, marker.lng]}
+            icon={connectingFrom && marker.id !== connectingFrom
               ? buildConnectIcon(marker.type)
               : buildIcon(marker.type)
-          return (
-            <Marker
-              key={marker.id}
-              position={[marker.lat, marker.lng]}
-              icon={icon}
-              eventHandlers={{ click: () => onMarkerClick(marker) }}
-            />
-          )
-        })}
+            }
+            eventHandlers={{ click: () => onMarkerClick(marker) }}
+          />
+        ))}
 
-        {/* From / To pins */}
-        {fromPoint && <Marker position={[fromPoint.lat, fromPoint.lng]} icon={fromIcon} />}
-        {toPoint   && <Marker position={[toPoint.lat,   toPoint.lng]}   icon={toIcon}   />}
-
-        {/* User location */}
-        {userLocation && (
-          <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon} />
-        )}
-
-        {/* Pending add-marker ghost pin */}
+        {fromPoint   && <Marker position={[fromPoint.lat,   fromPoint.lng]}   icon={fromIcon}   />}
+        {toPoint     && <Marker position={[toPoint.lat,     toPoint.lng]}     icon={toIcon}     />}
+        {userLocation && <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon} />}
         {addingMode && pendingLatLng && (
           <Marker position={[pendingLatLng.lat, pendingLatLng.lng]} icon={pendingIcon} />
         )}
-
-        {/* Map search result pin */}
         {flyTarget && (
           <Marker position={[flyTarget.lat, flyTarget.lng]} icon={searchIcon} />
         )}
