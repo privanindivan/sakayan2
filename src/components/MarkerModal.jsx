@@ -35,7 +35,7 @@ function formatSchedule(s) {
 export default function MarkerModal({
   marker, allMarkers, connections,
   isAdmin, requireAdmin,
-  onClose, onSave, onDisconnect, onStartConnect,
+  onClose, onSave, onDelete, onDisconnect, onStartConnect,
 }) {
   const [editing,  setEditing]  = useState(false)
   const [name,     setName]     = useState(marker.name)
@@ -229,6 +229,17 @@ export default function MarkerModal({
                 <button className="btn-save" onClick={handleSave}>Save</button>
                 <button className="btn-cancel-edit" onClick={handleCancel}>Cancel</button>
               </div>
+
+              <button
+                className="btn-delete-stop"
+                onClick={() => {
+                  if (window.confirm(`Delete "${marker.name}"? This cannot be undone.`)) {
+                    onDelete(marker.id)
+                  }
+                }}
+              >
+                🗑 Delete this stop
+              </button>
             </>
           ) : (
             <>
