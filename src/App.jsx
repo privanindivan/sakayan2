@@ -4,7 +4,6 @@ import SearchBar       from './components/SearchBar'
 import AddMarkerForm   from './components/AddMarkerForm'
 import MarkerModal     from './components/MarkerModal'
 import DirectionPanel  from './components/DirectionPanel'
-import RoutePanel      from './components/RoutePanel'
 import PinModal        from './components/PinModal'
 import { useAdminAuth } from './hooks/useAdminAuth'
 import { INITIAL_MARKERS } from './data/sampleData'
@@ -34,18 +33,11 @@ export default function App() {
   const [flyTarget,      setFlyTarget]      = useState(null)
   const [searchResetKey, setSearchResetKey] = useState(0)
 
-  // Manual route builder
-  const [routeMode,  setRouteMode]  = useState(false)
-  const [routeStops, setRouteStops] = useState([])
-
-  // Admin PIN
   const { isAdmin, requireAdmin, showPinModal, onPinSuccess, onPinCancel } = useAdminAuth()
 
-  // Auto-save whenever data changes
   useEffect(() => { save('sakayan_markers',     markers)     }, [markers])
   useEffect(() => { save('sakayan_connections', connections) }, [connections])
 
-  // Auto-clear flyTarget after fly animation completes
   useEffect(() => {
     if (!flyTarget) return
     const t = setTimeout(() => setFlyTarget(null), 1500)
@@ -89,30 +81,17 @@ export default function App() {
     setSelectedMarker(null)
   }, [])
 
-  const handleCancelConnect = useCallback(() => {
-    setConnectingFrom(null)
-  }, [])
+  const handleCancelConnect = useCallback(() => setConnectingFrom(null), [])
 
   const handleMarkerClick = useCallback((marker) => {
     if (showForm) return
-
-    // Route-building mode: tap stops to add them in order
-    if (routeMode) {
-      setRouteStops(prev => {
-        // Avoid duplicate consecutive stop
-        if (prev.length > 0 && prev[prev.length - 1].id === marker.id) return prev
-        return [...prev, marker]
-      })
-      return
-    }
-
     if (connectingFrom !== null) {
       if (connectingFrom !== marker.id) handleConnect(connectingFrom, marker.id)
       setConnectingFrom(null)
       return
     }
     setSelectedMarker(marker)
-  }, [showForm, routeMode, connectingFrom, handleConnect])
+  }, [showForm, connectingFrom, handleConnect])
 
   const handleAddMarker = (data) => {
     setMarkers(prev => [...prev, { id: Date.now(), ...data }])
@@ -138,18 +117,6 @@ export default function App() {
     )
   }
 
-  const toggleRouteMode = () => {
-    if (routeMode) {
-      setRouteMode(false)
-      setRouteStops([])
-    } else {
-      setRouteMode(true)
-      // Close any open panels when entering route mode
-      setSelectedMarker(null)
-      setConnectingFrom(null)
-    }
-  }
-
   return (
     <div className="app">
       <SearchBar onRoute={handleRoute} onFlyTo={(t) => setFlyTarget(t)} markers={markers} resetKey={searchResetKey} />
@@ -168,9 +135,6 @@ export default function App() {
         flyTarget={flyTarget}
         addingMode={showForm}
         pendingLatLng={pendingLatLng}
-        routeMode={routeMode}
-        routeStops={routeStops}
-        onCancelRouteMode={() => { setRouteMode(false); setRouteStops([]) }}
       />
 
       {/* Corner buttons */}
@@ -182,14 +146,6 @@ export default function App() {
           title="My location"
         >
           {locating ? '…' : '◎'}
-        </button>
-        <button
-          className={`icon-btn route-mode-btn${routeMode ? ' route-mode-active' : ''}`}
-          onClick={toggleRouteMode}
-          aria-label="Build route"
-          title="Build route"
-        >
-          ↗
         </button>
         <button
           className={`icon-btn fab-btn ${showForm ? 'fab-cancel' : ''}`}
@@ -223,15 +179,6 @@ export default function App() {
           connections={connections}
           onClose={() => { setFromPoint(null); setToPoint(null); setSearchResetKey(k => k + 1) }}
           onMarkerSelect={(m) => setSelectedMarker(m)}
-        />
-      )}
-
-      {routeMode && routeStops.length >= 1 && (
-        <RoutePanel
-          stops={routeStops}
-          onRemoveStop={(i) => setRouteStops(prev => prev.filter((_, idx) => idx !== i))}
-          onClear={() => setRouteStops([])}
-          onClose={() => { setRouteMode(false); setRouteStops([]) }}
         />
       )}
 
