@@ -4,6 +4,7 @@ import { TYPE_COLORS, VEHICLE_TYPES } from '../data/sampleData'
 
 export default function MarkerModal({
   marker, allMarkers, connections,
+  isAdmin, requireAdmin,
   onClose, onSave, onDisconnect, onStartConnect,
 }) {
   const [editing,  setEditing]  = useState(false)
@@ -159,13 +160,13 @@ export default function MarkerModal({
                 <p className="marker-schedule">🕐 {marker.schedule}</p>
               )}
 
-              {/* Action row: Edit + Connect */}
+              {/* Action row: Edit + Connect (admin-gated) */}
               <div className="modal-actions">
-                <button className="edit-btn" onClick={() => setEditing(true)}>
-                  &#9998; Edit
+                <button className="edit-btn" onClick={() => requireAdmin(() => setEditing(true))}>
+                  &#9998; Edit{!isAdmin && ' 🔒'}
                 </button>
-                <button className="modal-connect-btn" onClick={() => onStartConnect(marker.id)}>
-                  + Connect
+                <button className="modal-connect-btn" onClick={() => requireAdmin(() => onStartConnect(marker.id))}>
+                  + Connect{!isAdmin && ' 🔒'}
                 </button>
               </div>
 
