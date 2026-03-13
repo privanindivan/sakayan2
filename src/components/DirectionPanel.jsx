@@ -72,10 +72,18 @@ function vehicleEmoji(type) {
   return '🚐'
 }
 
-function pathFare(stops) {
-  const fares = stops.slice(0, -1).map(s => s.fare).filter(f => f != null)
+function pathFare(connIds, connections) {
+  const fares = connIds.map(id => connections.find(c => c.id === id)?.fare).filter(f => f != null)
   if (!fares.length) return null
   return fares.reduce((a, b) => a + b, 0)
+}
+
+function segmentFare(fromId, toId, connections) {
+  const conn = connections.find(c =>
+    (c.fromId === fromId && c.toId === toId) ||
+    (c.fromId === toId   && c.toId === fromId)
+  )
+  return conn?.fare ?? null
 }
 
 export default function DirectionPanel({
@@ -167,8 +175,7 @@ export default function DirectionPanel({
       {routes.length > 1 && (
         <div className="route-options-row">
           {routes.map((r, i) => {
-            const stops  = r.stopIds.map(id => markers.find(m => m.id === id)).filter(Boolean)
-            const fare   = pathFare(stops)
+            const fare   = pathFare(r.connIds ?? [], connections)
             const active = safeIdx === i
             return (
               <button
@@ -210,7 +217,9 @@ export default function DirectionPanel({
               <div className="dir-step-body">
                 <span className="dir-ride-label" style={{ color: step.segColor }}>
                   {step.from.type}
-                  {step.from.fare != null && <span className="dir-step-fare"> · ₱{step.from.fare}</span>}
+                  {segmentFare(step.from.id, step.to.id, connections) != null && (
+                    <span className="dir-step-fare"> · ₱{segmentFare(step.from.id, step.to.id, connections)}</span>
+                  )}
                 </span>
                 <span className="dir-ride-route">{step.from.name} → {step.to.name}</span>
               </div>

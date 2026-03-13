@@ -93,11 +93,13 @@ export default function App() {
                   id: i,
                   positions: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
                   color: ALT_COLORS[i % ALT_COLORS.length],
+                  distance: route.distance,
                 }))
               : [{ // fallback: straight line if OSRM returns nothing
                   id: 0,
                   positions: [[fromM.lat, fromM.lng], [marker.lat, marker.lng]],
                   color: ALT_COLORS[0],
+                  distance: null,
                 }]
             setPendingConnect(prev =>
               prev && prev.fromId === snap.fromId && prev.toId === snap.toId
@@ -126,7 +128,7 @@ export default function App() {
   }, [showForm, connectingFrom, markers])
 
   // ✓ Keep this alternative → save as a connection
-  const handleConfirmAlt = useCallback((altId) => {
+  const handleConfirmAlt = useCallback((altId, fare) => {
     if (!pendingConnect) return
     const alt = pendingConnect.alternatives.find(a => a.id === altId)
     if (!alt) return
@@ -138,6 +140,7 @@ export default function App() {
         toId:     pendingConnect.toId,
         geometry: alt.positions,
         color:    TYPE_COLORS[markers.find(m => m.id === pendingConnect.fromId)?.type] || '#4A90D9',
+        fare:     fare ?? null,
       },
     ])
     // Remove confirmed alt; close sheet if none left

@@ -1785,19 +1785,65 @@ html, body, #root {
   gap: 10px;
   padding: 12px 0;
   border-top: 1px solid #334155;
+  flex-wrap: wrap;
+}
+.route-alt-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 .route-alt-dot {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   flex-shrink: 0;
 }
+.route-alt-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 .route-alt-label {
-  flex: 1;
   color: #e2e8f0;
   font-size: 14px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+.route-alt-tag {
+  font-size: 11px;
+  background: #22C55E22;
+  color: #22C55E;
+  border: 1px solid #22C55E55;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-weight: 600;
+}
+.route-alt-dist {
+  font-size: 12px;
+  color: #64748b;
+}
+.route-alt-fare-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+.route-alt-fare-input {
+  width: 90px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e2e8f0;
+  font-size: 14px;
+  padding: 2px 0;
+}
+.route-alt-fare-input::placeholder { color: #475569; }
 .route-alt-actions {
   display: flex;
   gap: 8px;
