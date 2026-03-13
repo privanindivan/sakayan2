@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect } from 'react'
-import MapView         from './components/MapView'
-import SearchBar       from './components/SearchBar'
-import AddMarkerForm   from './components/AddMarkerForm'
-import MarkerModal     from './components/MarkerModal'
-import DirectionPanel  from './components/DirectionPanel'
-import PinModal        from './components/PinModal'
-import { useAdminAuth } from './hooks/useAdminAuth'
+import MapView           from './components/MapView'
+import SearchBar         from './components/SearchBar'
+import AddMarkerForm     from './components/AddMarkerForm'
+import MarkerModal       from './components/MarkerModal'
+import DirectionPanel    from './components/DirectionPanel'
+import PinModal          from './components/PinModal'
+import RoutePickerSheet  from './components/RoutePickerSheet'
+import { useAdminAuth }  from './hooks/useAdminAuth'
 import { INITIAL_MARKERS } from './data/sampleData'
 
 function load(key, fallback) {
@@ -30,6 +31,7 @@ export default function App() {
   const [userLocation,   setUserLocation]   = useState(null)
   const [locating,       setLocating]       = useState(false)
   const [connectingFrom, setConnectingFrom] = useState(null)
+  const [pendingConnect, setPendingConnect] = useState(null) // { fromId, toId }
   const [flyTarget,      setFlyTarget]      = useState(null)
   const [searchResetKey, setSearchResetKey] = useState(0)
 
@@ -53,12 +55,29 @@ export default function App() {
     if (showForm) setPendingLatLng(latlng)
   }, [showForm])
 
-  const handleConnect = useCallback((fromId, toId) => {
-    if (fromId === toId) return
+  // Step 1: tap second stop → open route picker
+  const handleStartConnect = useCallback((markerId) => {
+    setConnectingFrom(markerId)
+    setSelectedMarker(null)
+  }, [])
+
+  const handleCancelConnect = useCallback(() => setConnectingFrom(null), [])
+
+  // Step 2: user picks a route name → save connection
+  const handleConfirmConnect = useCallback((routeName) => {
+    if (!pendingConnect) return
+    const { fromId, toId } = pendingConnect
     setConnections(prev => [
       ...prev,
-      { id: `${fromId}-${toId}-${Date.now()}`, fromId, toId },
+      { id: `${fromId}-${toId}-${Date.now()}`, fromId, toId, routeName },
     ])
+    setPendingConnect(null)
+    setConnectingFrom(null)
+  }, [pendingConnect])
+
+  const handleCancelPicker = useCallback(() => {
+    setPendingConnect(null)
+    setConnectingFrom(null)
   }, [])
 
   const handleRemoveConnection = useCallback((connId) => {
@@ -71,22 +90,19 @@ export default function App() {
     setSelectedMarker(null)
   }, [])
 
-  const handleStartConnect = useCallback((markerId) => {
-    setConnectingFrom(markerId)
-    setSelectedMarker(null)
-  }, [])
-
-  const handleCancelConnect = useCallback(() => setConnectingFrom(null), [])
-
   const handleMarkerClick = useCallback((marker) => {
     if (showForm) return
     if (connectingFrom !== null) {
-      if (connectingFrom !== marker.id) handleConnect(connectingFrom, marker.id)
-      setConnectingFrom(null)
+      if (connectingFrom !== marker.id) {
+        // Show picker instead of connecting immediately
+        setPendingConnect({ fromId: connectingFrom, toId: marker.id })
+      } else {
+        setConnectingFrom(null)
+      }
       return
     }
     setSelectedMarker(marker)
-  }, [showForm, connectingFrom, handleConnect])
+  }, [showForm, connectingFrom])
 
   const handleAddMarker = (data) => {
     setMarkers(prev => [...prev, { id: Date.now(), ...data }])
@@ -111,6 +127,9 @@ export default function App() {
       { enableHighAccuracy: true, timeout: 8000 }
     )
   }
+
+  // Collect existing unique route names for quick-pick
+  const existingRouteNames = [...new Set(connections.map(c => c.routeName).filter(Boolean))]
 
   return (
     <div className="app">
@@ -157,11 +176,9 @@ export default function App() {
       </div>
 
       {/* Connect-mode banner */}
-      {connectingFrom && (
+      {connectingFrom && !pendingConnect && (
         <div className="line-build-banner">
-          <span className="line-build-count">
-            Tap another stop to connect
-          </span>
+          <span className="line-build-count">Tap another stop to connect</span>
           <button className="line-build-cancel" onClick={handleCancelConnect}>✕ Cancel</button>
         </div>
       )}
@@ -171,6 +188,17 @@ export default function App() {
           pendingLatLng={pendingLatLng}
           onSubmit={handleAddMarker}
           onCancel={handleCancelForm}
+        />
+      )}
+
+      {/* Route name picker — appears after tapping second stop */}
+      {pendingConnect && (
+        <RoutePickerSheet
+          fromStop={markers.find(m => m.id === pendingConnect.fromId)}
+          toStop={markers.find(m => m.id === pendingConnect.toId)}
+          existingRouteNames={existingRouteNames}
+          onConfirm={handleConfirmConnect}
+          onCancel={handleCancelPicker}
         />
       )}
 
