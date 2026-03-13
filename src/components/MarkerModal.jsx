@@ -36,7 +36,7 @@ export default function MarkerModal({
   marker, connections, markers,
   isAdmin, requireAdmin,
   onClose, onSave, onDelete,
-  onRemoveConnection, onStartConnect, onStopClick,
+  onRemoveConnection, onStartConnect, onConnClick,
 }) {
   const [editing,  setEditing]  = useState(false)
   const [name,     setName]     = useState(marker.name)
@@ -274,10 +274,10 @@ export default function MarkerModal({
                         <div
                           key={c.id}
                           className="connect-item connect-item-clickable"
-                          onClick={() => onStopClick?.(other.id)}
+                          onClick={() => onConnClick?.(marker.id, other.id)}
                           role="button"
                           tabIndex={0}
-                          onKeyDown={e => e.key === 'Enter' && onStopClick?.(other.id)}
+                          onKeyDown={e => e.key === 'Enter' && onConnClick?.(marker.id, other.id)}
                         >
                           <span
                             className="line-color-dot"
