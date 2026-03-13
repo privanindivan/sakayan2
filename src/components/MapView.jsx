@@ -7,8 +7,8 @@ import L from 'leaflet'
 import RoadRoute from './RoadRoute'
 import { TYPE_COLORS } from '../data/sampleData'
 
-const METRO_MANILA = [14.5820, 121.0090]
-const DEFAULT_ZOOM = 13
+const PHILIPPINES = [12.8797, 121.7740]
+const DEFAULT_ZOOM = 6
 
 function buildIcon(type, highlighted) {
   const color = TYPE_COLORS[type] || '#E74C3C'
@@ -141,7 +141,7 @@ export default function MapView({
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
       <MapContainer
-        center={METRO_MANILA}
+        center={PHILIPPINES}
         zoom={DEFAULT_ZOOM}
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
