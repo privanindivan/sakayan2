@@ -45,7 +45,7 @@ export default function RoutePickerSheet({ fromStop, toStop, existingRouteNames,
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleConfirm()}
-            placeholder={existingRouteNames.length ? 'Or type a new route name…' : 'e.g. Jeepney 22B, Bus 5…'}
+            placeholder={existingRouteNames.length ? 'Or type a new route name…' : 'e.g. Jeep 22B, Bus 5…'}
             autoFocus
           />
           <button
