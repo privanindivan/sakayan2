@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Polyline, Tooltip, Popup } from 'react-leaflet'
+import { Polyline } from 'react-leaflet'
 
 // Double-layer polyline: white casing + colored line so routes pop against OSM tiles
-function StyledRoute({ positions, color, label, dashed = false, onRemove }) {
+function StyledRoute({ positions, color, dashed = false }) {
   const dash = dashed ? '8 8' : undefined
   return (
     <>
@@ -22,14 +22,13 @@ function StyledRoute({ positions, color, label, dashed = false, onRemove }) {
         weight={5}
         opacity={1}
         dashArray={dash}
-      >
-        {label && <Tooltip sticky>{label}</Tooltip>}
-      </Polyline>
+        interactive={false}
+      />
     </>
   )
 }
 
-export default function RoadRoute({ route, onRemove }) {
+export default function RoadRoute({ route }) {
   const [positions, setPositions] = useState(null)
 
   useEffect(() => {
@@ -53,7 +52,6 @@ export default function RoadRoute({ route, onRemove }) {
       <StyledRoute
         positions={route.waypoints}
         color={route.color}
-        label={route.label}
         dashed
       />
     )
@@ -63,8 +61,6 @@ export default function RoadRoute({ route, onRemove }) {
     <StyledRoute
       positions={positions}
       color={route.color}
-      label={route.label}
-      onRemove={onRemove}
     />
   )
 }
