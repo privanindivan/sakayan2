@@ -202,15 +202,14 @@ export default function MapView({
           )
         })}
 
-        {/* Pending alternatives — green (editing/connecting mode) */}
+        {/* Pending alternatives — distinct colors so user can match Option N to map line */}
         {pendingAlternatives.map(alt => (
           <Polyline
             key={`alt-${alt.id}`}
             positions={alt.positions}
-            color="#22C55E"
+            color={alt.color}
             weight={6}
-            opacity={0.55}
-            dashArray="1 0"
+            opacity={0.7}
             interactive={false}
           />
         ))}

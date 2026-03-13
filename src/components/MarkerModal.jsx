@@ -42,7 +42,6 @@ export default function MarkerModal({
   const [name,     setName]     = useState(marker.name)
   const [type,     setType]     = useState(marker.type)
   const [details,  setDetails]  = useState(marker.details || '')
-  const [fare,     setFare]     = useState(marker.fare != null ? String(marker.fare) : '')
   const [sched,    setSched]    = useState(() => initSched(marker.schedule))
   const [images,   setImages]   = useState(marker.images)
   const fileInputRef = useRef(null)
@@ -88,7 +87,6 @@ export default function MarkerModal({
       name:     name.trim(),
       type,
       details:  details.trim(),
-      fare:     fare !== '' ? Number(fare) : null,
       schedule: scheduleValue,
       images,
     })
@@ -99,7 +97,6 @@ export default function MarkerModal({
     setName(marker.name)
     setType(marker.type)
     setDetails(marker.details || '')
-    setFare(marker.fare != null ? String(marker.fare) : '')
     setSched(initSched(marker.schedule))
     setImages(marker.images)
     setEditing(false)
@@ -140,22 +137,6 @@ export default function MarkerModal({
                 placeholder="Routes, notes…"
                 rows={3}
               />
-
-              {/* Fare */}
-              <label className="edit-label">Starting fare (₱)</label>
-              <div className="fare-input-wrap">
-                <span className="fare-prefix">₱</span>
-                <input
-                  className="edit-field fare-input"
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.5"
-                  value={fare}
-                  onChange={e => setFare(e.target.value)}
-                  placeholder="e.g. 13"
-                />
-              </div>
 
               {/* Schedule */}
               <label className="edit-label">Schedule</label>
@@ -249,9 +230,6 @@ export default function MarkerModal({
               {details && <p className="marker-details">{details}</p>}
 
               <div className="marker-meta-row">
-                {marker.fare != null && (
-                  <span className="marker-fare-badge">₱{marker.fare} base fare</span>
-                )}
                 {schedDisplay && (
                   <span className="marker-sched-badge">🕐 {schedDisplay}</span>
                 )}
