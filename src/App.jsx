@@ -309,6 +309,10 @@ export default function App() {
           onDelete={handleDeleteMarker}
           onRemoveConnection={handleRemoveConnection}
           onStartConnect={handleStartConnect}
+          onStopClick={(id) => {
+            const m = markers.find(mk => mk.id === id)
+            if (m) { setSelectedMarker(null); setTimeout(() => setSelectedMarker(m), 80) }
+          }}
         />
       )}
 

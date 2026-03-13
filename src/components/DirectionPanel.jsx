@@ -1,18 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { TYPE_COLORS } from '../data/sampleData'
 
 const ROUTE_COLORS = ['#4A90D9', '#FF6B35', '#27AE60', '#F39C12', '#8E44AD', '#E74C3C', '#1ABC9C']
 
+const PEEK_H  = 72   // px — just drag handle + endpoint names visible
+const HALF_H  = 0.46  // % of window height
+const FULL_H  = 0.88  // % of window height
+
 function dist(a, b) {
   return Math.hypot(a.lat - b.lat, a.lng - b.lng)
 }
-
 function findNearest(point, markers) {
   if (!markers.length) return null
   return markers.reduce((best, m) => dist(m, point) < dist(best, point) ? m : best)
 }
-
-// Build adjacency: stopId → [{ connId, neighborId, color }]
 function buildAdjacency(connections) {
   const adj = {}
   for (const c of connections) {
@@ -23,13 +24,10 @@ function buildAdjacency(connections) {
   }
   return adj
 }
-
-// DFS — returns array of { stopIds, connIds, colors[] }
 function findAllPaths(startId, endId, adj, maxDepth = 40) {
   const results      = []
   const visitedStops = new Set()
   const usedConns    = new Set()
-
   function dfs(current, stopPath, colors, connPath) {
     if (stopPath.length > maxDepth) return
     if (current === endId) {
@@ -54,30 +52,25 @@ function findAllPaths(startId, endId, adj, maxDepth = 40) {
       }
     }
   }
-
   visitedStops.add(startId)
   dfs(startId, [startId], [], [])
   results.sort((a, b) => a.stopIds.length - b.stopIds.length)
   return results
 }
-
 function pathColor(colors, idx) {
   return colors[idx] || ROUTE_COLORS[idx % ROUTE_COLORS.length]
 }
-
 function vehicleEmoji(type) {
   if (type === 'Train')    return '🚆'
   if (type === 'Bus')      return '🚌'
   if (type === 'Tricycle') return '🛺'
   return '🚐'
 }
-
 function pathFare(connIds, connections) {
   const fares = connIds.map(id => connections.find(c => c.id === id)?.fare).filter(f => f != null)
   if (!fares.length) return null
   return fares.reduce((a, b) => a + b, 0)
 }
-
 function segmentFare(fromId, toId, connections) {
   const conn = connections.find(c =>
     (c.fromId === fromId && c.toId === toId) ||
@@ -86,11 +79,86 @@ function segmentFare(fromId, toId, connections) {
   return conn?.fare ?? null
 }
 
+// ── Swipe-to-snap hook ─────────────────────────────────────────────────────
+function useSwipeSheet(sheetRef) {
+  const [snap,    setSnap]    = useState('half')   // 'peek' | 'half' | 'full'
+  const dragging  = useRef(false)
+  const startY    = useRef(0)
+  const startH    = useRef(0)
+
+  const snapHeight = useCallback((s) => {
+    const wh = window.innerHeight
+    if (s === 'peek') return PEEK_H
+    if (s === 'full') return Math.round(wh * FULL_H)
+    return Math.round(wh * HALF_H)
+  }, [])
+
+  // Apply live height while dragging (no transition)
+  const applyH = (h) => {
+    if (!sheetRef.current) return
+    sheetRef.current.style.transition = 'none'
+    sheetRef.current.style.height = h + 'px'
+  }
+
+  // Snap to state (with transition)
+  const snapTo = useCallback((s) => {
+    setSnap(s)
+    if (!sheetRef.current) return
+    sheetRef.current.style.transition = 'height 0.28s cubic-bezier(0.32,0.72,0,1)'
+    sheetRef.current.style.height = snapHeight(s) + 'px'
+  }, [sheetRef, snapHeight])
+
+  const onPointerDown = useCallback((e) => {
+    dragging.current = true
+    startY.current = e.touches ? e.touches[0].clientY : e.clientY
+    startH.current = sheetRef.current?.getBoundingClientRect().height ?? snapHeight('half')
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }, [sheetRef, snapHeight])
+
+  const onPointerMove = useCallback((e) => {
+    if (!dragging.current) return
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY
+    const delta   = startY.current - clientY       // +ve = finger moved up = taller sheet
+    const wh      = window.innerHeight
+    const newH    = Math.max(PEEK_H, Math.min(Math.round(wh * FULL_H), startH.current + delta))
+    applyH(newH)
+  }, [])
+
+  const onPointerUp = useCallback((e) => {
+    if (!dragging.current) return
+    dragging.current = false
+    const wh = window.innerHeight
+    const h  = sheetRef.current?.getBoundingClientRect().height ?? snapHeight('half')
+    // Snap to nearest breakpoint
+    const peekH = PEEK_H
+    const halfH = Math.round(wh * HALF_H)
+    const fullH = Math.round(wh * FULL_H)
+    const dists = [
+      { s: 'peek', d: Math.abs(h - peekH) },
+      { s: 'half', d: Math.abs(h - halfH) },
+      { s: 'full', d: Math.abs(h - fullH) },
+    ]
+    const best = dists.reduce((a, b) => a.d < b.d ? a : b).s
+    snapTo(best)
+  }, [sheetRef, snapHeight, snapTo])
+
+  // Sync height when snap state changes from outside (e.g. initial mount)
+  useEffect(() => {
+    snapTo(snap)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { snap, snapTo, onPointerDown, onPointerMove, onPointerUp }
+}
+
 export default function DirectionPanel({
   fromPoint, toPoint, markers, connections,
   onClose, onActiveRoute, onSegmentFocus,
 }) {
-  const [selectedIdx, setSelectedIdx] = useState(0)
+  const sheetRef  = useRef(null)
+  const { snap, snapTo, onPointerDown, onPointerMove, onPointerUp } = useSwipeSheet(sheetRef)
+
+  // Track which routes are expanded (all open by default)
+  const [expanded, setExpanded] = useState({})
 
   const nearFrom = findNearest(fromPoint, markers)
   const nearTo   = findNearest(toPoint,   markers)
@@ -101,44 +169,61 @@ export default function DirectionPanel({
     : []
 
   const routes = allPaths.map(({ stopIds, connIds, colors }, i) => ({
-    stopIds,
-    connIds,
-    colors,
+    stopIds, connIds, colors,
     color: colors[0] || ROUTE_COLORS[i % ROUTE_COLORS.length],
     label: `Route ${i + 1}`,
   }))
 
-  const safeIdx = routes.length > 0 ? Math.min(selectedIdx, routes.length - 1) : 0
-  const route   = routes[safeIdx] ?? null
-
-  // Notify parent of active route on mount
+  // On mount, tell parent which route is active (first one) and expand it
   useEffect(() => {
     if (routes.length > 0) {
       onActiveRoute?.(routes[0].stopIds, routes[0].connIds ?? [])
+      setExpanded({ 0: true })
     }
-  }, []) // eslint-disable-line
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSelectRoute = (i) => {
-    setSelectedIdx(i)
-    onActiveRoute?.(routes[i].stopIds, routes[i].connIds ?? [])
+  const toggleExpand = (i) => {
+    setExpanded(prev => {
+      const open = !prev[i]
+      if (open) onActiveRoute?.(routes[i].stopIds, routes[i].connIds ?? [])
+      return { ...prev, [i]: open }
+    })
   }
 
-  const steps = []
-  if (route) {
+  const buildSteps = (route) => {
     const stops = route.stopIds.map(id => markers.find(m => m.id === id)).filter(Boolean)
-    if (stops.length > 0) {
-      steps.push({ kind: 'walk', label: `Walk to ${stops[0].name}` })
-      for (let i = 0; i < stops.length - 1; i++) {
-        steps.push({ kind: 'ride', from: stops[i], to: stops[i + 1], segColor: pathColor(route.colors, i) })
-      }
-      steps.push({ kind: 'walk', label: `Walk to ${toPoint.name || 'destination'}` })
+    if (!stops.length) return []
+    const steps = [{ kind: 'walk', label: `Walk to ${stops[0].name}` }]
+    for (let i = 0; i < stops.length - 1; i++) {
+      steps.push({ kind: 'ride', from: stops[i], to: stops[i + 1], segColor: pathColor(route.colors, i) })
     }
+    steps.push({ kind: 'walk', label: `Walk to ${toPoint.name || 'destination'}` })
+    return steps
   }
+
+  const isPeeking = snap === 'peek'
 
   return (
-    <div className="dir-panel">
-      <div className="dir-drag-handle" />
+    <div
+      ref={sheetRef}
+      className="dir-panel"
+      style={{ overflow: isPeeking ? 'hidden' : 'hidden', display: 'flex', flexDirection: 'column' }}
+    >
+      {/* Drag handle — pointer events here trigger swipe */}
+      <div
+        className="dir-drag-handle-wrap"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onTouchStart={onPointerDown}
+        onTouchMove={onPointerMove}
+        onTouchEnd={onPointerUp}
+        style={{ touchAction: 'none', cursor: 'ns-resize', padding: '10px 0 4px' }}
+      >
+        <div className="dir-drag-handle" />
+      </div>
 
+      {/* Header always visible */}
       <div className="dir-header">
         <div className="dir-endpoints">
           <div className="dir-endpoint">
@@ -154,80 +239,92 @@ export default function DirectionPanel({
         <button className="dir-close" onClick={onClose} aria-label="Close">&#x2715;</button>
       </div>
 
-      {nearFrom && nearTo && (
-        <div className="dir-snap-row">
-          <span className="dir-snap-stop" style={{ borderColor: TYPE_COLORS[nearFrom.type] || '#888' }}>
-            {nearFrom.name}
-          </span>
-          <span className="dir-snap-arrow">→</span>
-          <span className="dir-snap-stop" style={{ borderColor: TYPE_COLORS[nearTo.type] || '#888' }}>
-            {nearTo.name}
-          </span>
-        </div>
-      )}
+      {/* Scrollable body — hidden when peeking */}
+      <div className="dir-body" style={{ overflowY: isPeeking ? 'hidden' : 'auto', flex: 1 }}>
+        {nearFrom && nearTo && (
+          <div className="dir-snap-row">
+            <span className="dir-snap-stop" style={{ borderColor: TYPE_COLORS[nearFrom.type] || '#888' }}>
+              {nearFrom.name}
+            </span>
+            <span className="dir-snap-arrow">→</span>
+            <span className="dir-snap-stop" style={{ borderColor: TYPE_COLORS[nearTo.type] || '#888' }}>
+              {nearTo.name}
+            </span>
+          </div>
+        )}
 
-      {routes.length > 1 && (
-        <div className="route-count-label">
-          {`${routes.length} routes — tap to choose`}
-        </div>
-      )}
-
-      {routes.length > 1 && (
-        <div className="route-options-row">
-          {routes.map((r, i) => {
-            const fare   = pathFare(r.connIds ?? [], connections)
-            const active = safeIdx === i
-            return (
-              <button
-                key={i}
-                className={`route-option-card${active ? ' route-option-active' : ''}`}
-                style={active ? { borderColor: r.color, background: r.color + '18' } : {}}
-                onClick={() => handleSelectRoute(i)}
-              >
-                <span className="route-option-line-dot" style={{ background: r.color }} />
-                <span className="route-option-num">{r.label}</span>
-                <span className="route-option-stops">{r.stopIds.length - 1} hop{r.stopIds.length - 1 !== 1 ? 's' : ''}</span>
-                {fare != null && <span className="route-option-fare">₱{Math.round(fare)}</span>}
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      <div className="dir-steps">
         {routes.length === 0 && (
           <p className="dir-no-route">No route found. Connect the stops to create one.</p>
         )}
 
-        {route !== null && steps.map((step, i) =>
-          step.kind === 'walk' ? (
-            <div key={i} className="dir-step walk-step">
-              <span className="dir-step-ico">🚶</span>
-              <span className="dir-step-txt">{step.label}</span>
-            </div>
-          ) : (
-            <div
-              key={i}
-              className="dir-step ride-step"
-              onClick={() => onSegmentFocus?.(step.from.id, step.to.id)}
-            >
-              <span className="dir-step-ico ride-ico" style={{ background: step.segColor }}>
-                {vehicleEmoji(step.from.type)}
-              </span>
-              <div className="dir-step-body">
-                <span className="dir-ride-label" style={{ color: step.segColor }}>
-                  {step.from.type}
-                  {segmentFare(step.from.id, step.to.id, connections) != null && (
-                    <span className="dir-step-fare"> · ₱{segmentFare(step.from.id, step.to.id, connections)}</span>
+        {/* All routes shown as accordion */}
+        {routes.map((route, i) => {
+          const fare  = pathFare(route.connIds ?? [], connections)
+          const steps = buildSteps(route)
+          const open  = !!expanded[i]
+          return (
+            <div key={i} className="dir-route-block">
+              <button
+                className={`dir-route-header${open ? ' dir-route-header-open' : ''}`}
+                onClick={() => toggleExpand(i)}
+                style={{ borderLeft: `4px solid ${route.color}` }}
+              >
+                <span className="dir-route-dot" style={{ background: route.color }} />
+                <span className="dir-route-title">{route.label}</span>
+                <span className="dir-route-hops">{route.stopIds.length - 1} hop{route.stopIds.length - 1 !== 1 ? 's' : ''}</span>
+                {fare != null && <span className="dir-route-fare">₱{Math.round(fare)}</span>}
+                <span className="dir-route-chevron">{open ? '▲' : '▼'}</span>
+              </button>
+
+              {open && (
+                <div className="dir-steps">
+                  {steps.map((step, si) =>
+                    step.kind === 'walk' ? (
+                      <div key={si} className="dir-step walk-step">
+                        <span className="dir-step-ico">🚶</span>
+                        <span className="dir-step-txt">{step.label}</span>
+                      </div>
+                    ) : (
+                      <div
+                        key={si}
+                        className="dir-step ride-step"
+                        onClick={() => {
+                          onSegmentFocus?.(step.from.id, step.to.id)
+                          if (snap === 'full') snapTo('half')
+                        }}
+                      >
+                        <span className="dir-step-ico ride-ico" style={{ background: step.segColor }}>
+                          {vehicleEmoji(step.from.type)}
+                        </span>
+                        <div className="dir-step-body">
+                          <span className="dir-ride-label" style={{ color: step.segColor }}>
+                            {step.from.type}
+                            {segmentFare(step.from.id, step.to.id, connections) != null && (
+                              <span className="dir-step-fare"> · ₱{segmentFare(step.from.id, step.to.id, connections)}</span>
+                            )}
+                          </span>
+                          <span className="dir-ride-route">{step.from.name} → {step.to.name}</span>
+                        </div>
+                        <span className="dir-step-arrow">›</span>
+                      </div>
+                    )
                   )}
-                </span>
-                <span className="dir-ride-route">{step.from.name} → {step.to.name}</span>
-              </div>
-              <span className="dir-step-arrow">›</span>
+                </div>
+              )}
             </div>
           )
-        )}
+        })}
       </div>
+
+      {/* Tap-to-expand hint when peeking */}
+      {isPeeking && (
+        <div
+          className="dir-peek-tap"
+          onClick={() => snapTo('half')}
+        >
+          Tap to expand
+        </div>
+      )}
     </div>
   )
 }

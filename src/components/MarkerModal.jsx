@@ -36,7 +36,7 @@ export default function MarkerModal({
   marker, connections, markers,
   isAdmin, requireAdmin,
   onClose, onSave, onDelete,
-  onRemoveConnection, onStartConnect,
+  onRemoveConnection, onStartConnect, onStopClick,
 }) {
   const [editing,  setEditing]  = useState(false)
   const [name,     setName]     = useState(marker.name)
@@ -269,18 +269,30 @@ export default function MarkerModal({
                       const routeNum = sameStopConns.length > 1
                         ? ` (Route ${sameStopConns.indexOf(c) + 1})`
                         : ''
+                      const connFare = c.fare != null ? `₱${c.fare}` : null
                       return (
-                        <div key={c.id} className="connect-item">
+                        <div
+                          key={c.id}
+                          className="connect-item connect-item-clickable"
+                          onClick={() => onStopClick?.(other.id)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={e => e.key === 'Enter' && onStopClick?.(other.id)}
+                        >
                           <span
                             className="line-color-dot"
                             style={{ background: TYPE_COLORS[other.type] || '#888' }}
                           />
-                          <span className="connect-name">{other.name}{routeNum}</span>
-                          <span className="connect-stop-count">{other.type}</span>
+                          <div className="connect-item-body">
+                            <span className="connect-name">{other.name}{routeNum}</span>
+                            <span className="connect-stop-meta">
+                              {other.type}{connFare ? ` · ${connFare}` : ''}
+                            </span>
+                          </div>
                           {isAdmin && (
                             <button
                               className="connect-remove"
-                              onClick={() => onRemoveConnection(c.id)}
+                              onClick={e => { e.stopPropagation(); onRemoveConnection(c.id) }}
                               aria-label="Remove connection"
                             >
                               &#x2715;
