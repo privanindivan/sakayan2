@@ -1,7 +1,7 @@
-export const VEHICLE_TYPES = ['Jeepney', 'Bus', 'UV Express', 'Tricycle', 'Train']
+export const VEHICLE_TYPES = ['Jeep', 'Bus', 'UV Express', 'Tricycle', 'Train']
 
 export const TYPE_COLORS = {
-  Jeepney:      '#FF6B35',
+  Jeep:         '#FF6B35',
   Bus:          '#4A90D9',
   'UV Express': '#27AE60',
   Tricycle:     '#F39C12',
@@ -14,12 +14,12 @@ export const INITIAL_MARKERS = [
     id: 1,
     lat: 14.5998,
     lng: 120.9843,
-    type: 'Jeepney',
+    type: 'Jeep',
     name: 'Quiapo Terminal',
-    details: 'Major jeepney hub near Quiapo Church. Routes to Cubao, Divisoria, and Espana. Operates 5am–11pm.',
+    details: 'Major jeep hub near Quiapo Church. Routes to Cubao, Divisoria, and Espana. Operates 5am–11pm.',
     images: [
       'https://placehold.co/480x240/FF6B35/white?text=Quiapo+Terminal',
-      'https://placehold.co/480x240/FF6B35/white?text=Jeepney+Stop',
+      'https://placehold.co/480x240/FF6B35/white?text=Jeep+Stop',
       'https://placehold.co/480x240/FF6B35/white?text=Quiapo+Route',
     ],
   },
@@ -87,10 +87,10 @@ export const INITIAL_MARKERS = [
     id: 7,
     lat: 14.6024,
     lng: 120.9730,
-    type: 'Jeepney',
-    name: 'Divisoria Jeepney Stop',
+    type: 'Jeep',
+    name: 'Divisoria Jeep Stop',
     images: [
-      'https://placehold.co/480x240/FF6B35/white?text=Divisoria+Jeepney',
+      'https://placehold.co/480x240/FF6B35/white?text=Divisoria+Jeep',
       'https://placehold.co/480x240/FF6B35/white?text=Divisoria+Stop',
       'https://placehold.co/480x240/FF6B35/white?text=Tondo+Route',
     ],

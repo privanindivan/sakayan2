@@ -13,7 +13,7 @@ function haversineKm(a, b) {
 
 // Philippine fare rates (2024 LTFRB)
 function fareEstimate(type, km) {
-  if (type === 'Jeepney' || type === 'UV Express') {
+  if (type === 'Jeep' || type === 'UV Express') {
     return km <= 4 ? 13 : 13 + Math.ceil(km - 4) * 1.80
   }
   if (type === 'Bus') {
@@ -30,7 +30,7 @@ function avgSpeed(type) {
   if (type === 'Train')      return 40
   if (type === 'UV Express') return 30
   if (type === 'Bus')        return 25
-  return 20 // Jeepney, Tricycle
+  return 20 // Jeep, Tricycle
 }
 
 function fmtTime(minutes) {
