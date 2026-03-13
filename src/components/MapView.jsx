@@ -131,12 +131,21 @@ function UserRoute({ fromPoint, toPoint }) {
   )
 }
 
+const MAP_ROUTE_COLORS = ['#4A90D9', '#FF6B35', '#27AE60', '#F39C12', '#8E44AD', '#E74C3C', '#1ABC9C']
+
+function getRouteColor(routeName, allRouteNames) {
+  const idx = allRouteNames.indexOf(routeName)
+  return MAP_ROUTE_COLORS[(idx >= 0 ? idx : 0) % MAP_ROUTE_COLORS.length]
+}
+
 export default function MapView({
   markers, connections, connectingFrom,
   onMarkerClick, onMapClick,
   fromPoint, toPoint, userLocation, flyTarget,
   addingMode, pendingLatLng,
 }) {
+  const allRouteNames = [...new Set(connections.map(c => c.routeName).filter(Boolean))]
+
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
       <MapContainer
@@ -152,18 +161,21 @@ export default function MapView({
           maxZoom={19}
         />
 
-        {/* Render each connection as a road-snapped polyline */}
+        {/* Each connection colored by its route name */}
         {connections.map(conn => {
           const from = markers.find(m => m.id === conn.fromId)
           const to   = markers.find(m => m.id === conn.toId)
           if (!from || !to) return null
+          const color = conn.routeName
+            ? getRouteColor(conn.routeName, allRouteNames)
+            : (TYPE_COLORS[from.type] || '#4A90D9')
           return (
             <RoadRoute
               key={conn.id}
               route={{
                 id:        conn.id,
                 waypoints: [[from.lat, from.lng], [to.lat, to.lng]],
-                color:     TYPE_COLORS[from.type] || '#4A90D9',
+                color,
               }}
             />
           )
