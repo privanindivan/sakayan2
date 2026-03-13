@@ -15,7 +15,7 @@ function StyledRoute({ positions, color, label, dashed = false, onRemove }) {
         dashArray={dash}
         interactive={false}
       />
-      {/* Colored line on top — click opens remove popup */}
+      {/* Colored line on top */}
       <Polyline
         positions={positions}
         color={color}
@@ -24,16 +24,6 @@ function StyledRoute({ positions, color, label, dashed = false, onRemove }) {
         dashArray={dash}
       >
         {label && <Tooltip sticky>{label}</Tooltip>}
-        {onRemove && (
-          <Popup className="remove-popup" closeButton={false}>
-            <div className="popup-remove-wrap">
-              {label && <span className="popup-route-label">{label}</span>}
-              <button className="popup-remove-btn" onClick={onRemove}>
-                Remove route
-              </button>
-            </div>
-          </Popup>
-        )}
       </Polyline>
     </>
   )
