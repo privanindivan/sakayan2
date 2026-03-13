@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TYPE_COLORS } from '../data/sampleData'
 
 const ROUTE_COLORS = ['#4A90D9', '#FF6B35', '#27AE60', '#F39C12', '#8E44AD', '#E74C3C', '#1ABC9C']
@@ -24,17 +24,16 @@ function buildAdjacency(connections) {
   return adj
 }
 
-// DFS — returns array of { stopIds, colors[] }
-// Two A→B connections with different colors → two distinct route options
+// DFS — returns array of { stopIds, connIds, colors[] }
 function findAllPaths(startId, endId, adj, maxDepth = 40) {
   const results      = []
   const visitedStops = new Set()
   const usedConns    = new Set()
 
-  function dfs(current, stopPath, colors) {
+  function dfs(current, stopPath, colors, connPath) {
     if (stopPath.length > maxDepth) return
     if (current === endId) {
-      results.push({ stopIds: [...stopPath], colors: [...colors] })
+      results.push({ stopIds: [...stopPath], colors: [...colors], connIds: [...connPath] })
       return
     }
     const edges = adj[current]
@@ -45,9 +44,11 @@ function findAllPaths(startId, endId, adj, maxDepth = 40) {
         usedConns.add(connId)
         stopPath.push(neighborId)
         colors.push(color)
-        dfs(neighborId, stopPath, colors)
+        connPath.push(connId)
+        dfs(neighborId, stopPath, colors, connPath)
         stopPath.pop()
         colors.pop()
+        connPath.pop()
         usedConns.delete(connId)
         visitedStops.delete(neighborId)
       }
@@ -55,7 +56,7 @@ function findAllPaths(startId, endId, adj, maxDepth = 40) {
   }
 
   visitedStops.add(startId)
-  dfs(startId, [startId], [])
+  dfs(startId, [startId], [], [])
   results.sort((a, b) => a.stopIds.length - b.stopIds.length)
   return results
 }
@@ -77,7 +78,10 @@ function pathFare(stops) {
   return fares.reduce((a, b) => a + b, 0)
 }
 
-export default function DirectionPanel({ fromPoint, toPoint, markers, connections, onClose, onMarkerSelect }) {
+export default function DirectionPanel({
+  fromPoint, toPoint, markers, connections,
+  onClose, onActiveRoute, onSegmentFocus,
+}) {
   const [selectedIdx, setSelectedIdx] = useState(0)
 
   const nearFrom = findNearest(fromPoint, markers)
@@ -88,9 +92,9 @@ export default function DirectionPanel({ fromPoint, toPoint, markers, connection
     ? findAllPaths(nearFrom.id, nearTo.id, adj)
     : []
 
-  // Build route objects — each path gets its primary color from the first connection's color
-  const routes = allPaths.map(({ stopIds, colors }, i) => ({
+  const routes = allPaths.map(({ stopIds, connIds, colors }, i) => ({
     stopIds,
+    connIds,
     colors,
     color: colors[0] || ROUTE_COLORS[i % ROUTE_COLORS.length],
     label: `Route ${i + 1}`,
@@ -98,6 +102,18 @@ export default function DirectionPanel({ fromPoint, toPoint, markers, connection
 
   const safeIdx = routes.length > 0 ? Math.min(selectedIdx, routes.length - 1) : 0
   const route   = routes[safeIdx] ?? null
+
+  // Notify parent of active route on mount
+  useEffect(() => {
+    if (routes.length > 0) {
+      onActiveRoute?.(routes[0].stopIds, routes[0].connIds ?? [])
+    }
+  }, []) // eslint-disable-line
+
+  const handleSelectRoute = (i) => {
+    setSelectedIdx(i)
+    onActiveRoute?.(routes[i].stopIds, routes[i].connIds ?? [])
+  }
 
   const steps = []
   if (route) {
@@ -148,7 +164,6 @@ export default function DirectionPanel({ fromPoint, toPoint, markers, connection
         </div>
       )}
 
-      {/* Route choice cards */}
       {routes.length > 1 && (
         <div className="route-options-row">
           {routes.map((r, i) => {
@@ -160,7 +175,7 @@ export default function DirectionPanel({ fromPoint, toPoint, markers, connection
                 key={i}
                 className={`route-option-card${active ? ' route-option-active' : ''}`}
                 style={active ? { borderColor: r.color, background: r.color + '18' } : {}}
-                onClick={() => setSelectedIdx(i)}
+                onClick={() => handleSelectRoute(i)}
               >
                 <span className="route-option-line-dot" style={{ background: r.color }} />
                 <span className="route-option-num">{r.label}</span>
@@ -184,7 +199,11 @@ export default function DirectionPanel({ fromPoint, toPoint, markers, connection
               <span className="dir-step-txt">{step.label}</span>
             </div>
           ) : (
-            <div key={i} className="dir-step ride-step" onClick={() => onMarkerSelect?.(step.from)}>
+            <div
+              key={i}
+              className="dir-step ride-step"
+              onClick={() => onSegmentFocus?.(step.from.id, step.to.id)}
+            >
               <span className="dir-step-ico ride-ico" style={{ background: step.segColor }}>
                 {vehicleEmoji(step.from.type)}
               </span>

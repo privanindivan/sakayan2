@@ -37,6 +37,9 @@ export default function App() {
   const [pendingConnect, setPendingConnect] = useState(null)
   const [flyTarget,      setFlyTarget]      = useState(null)
   const [searchResetKey, setSearchResetKey] = useState(0)
+  const [activeStopIds,  setActiveStopIds]  = useState([])
+  const [activeConnIds,  setActiveConnIds]  = useState([])
+  const [focusedSegment, setFocusedSegment] = useState(null)
 
   const { isAdmin, requireAdmin, showPinModal, onPinSuccess, onPinCancel } = useAdminAuth()
 
@@ -207,6 +210,9 @@ export default function App() {
         flyTarget={flyTarget}
         addingMode={showForm}
         pendingLatLng={pendingLatLng}
+        activeStopIds={activeStopIds}
+        activeConnIds={activeConnIds}
+        focusedSegment={focusedSegment}
       />
 
       {/* Corner buttons */}
@@ -270,8 +276,18 @@ export default function App() {
           toPoint={toPoint}
           markers={markers}
           connections={connections}
-          onClose={() => { setFromPoint(null); setToPoint(null); setSearchResetKey(k => k + 1) }}
-          onMarkerSelect={(m) => setSelectedMarker(m)}
+          onClose={() => {
+            setFromPoint(null); setToPoint(null)
+            setSearchResetKey(k => k + 1)
+            setActiveStopIds([]); setActiveConnIds([])
+            setFocusedSegment(null)
+          }}
+          onActiveRoute={(stopIds, connIds) => {
+            setActiveStopIds(stopIds)
+            setActiveConnIds(connIds)
+            setFocusedSegment(null)
+          }}
+          onSegmentFocus={(fromId, toId) => setFocusedSegment({ fromId, toId })}
         />
       )}
 
