@@ -181,6 +181,29 @@ html, body, #root {
 .result-myloc { background: #f8f8ff; }
 .result-myloc .result-text { color: #6366F1; font-weight: 600; }
 
+/* Recent searches row */
+.result-recent { display: flex; align-items: center; }
+.result-recent-icon { opacity: 0.5; }
+.result-recent-name {
+  flex: 1;
+  color: #333;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.result-recent-remove {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.result-recent-remove:hover { color: #888; background: #f0f0f0; }
+
 /* ============================================================
    CORNER BUTTONS (locate + add) — both small
    ============================================================ */

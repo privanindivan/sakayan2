@@ -4,6 +4,18 @@ import { TYPE_COLORS } from '../data/sampleData'
 const NOMINATIM = (q) =>
   `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&countrycodes=ph&limit=5`
 
+const RECENT_KEY  = 'sakayan_recent_searches'
+const RECENT_MAX  = 6
+
+function loadRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') } catch { return [] }
+}
+function saveRecent(point) {
+  const prev    = loadRecent().filter(r => r.name !== point.name)
+  const updated = [{ lat: point.lat, lng: point.lng, name: point.name }, ...prev].slice(0, RECENT_MAX)
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(updated)) } catch { /* quota */ }
+}
+
 async function fetchPlaces(q) {
   if (!q.trim()) return []
   try {
@@ -23,7 +35,6 @@ function getMyLocation() {
   })
 }
 
-// Only shows markers when user has typed something
 function matchMarkers(markers, query) {
   if (!query.trim()) return []
   const q = query.toLowerCase()
@@ -38,15 +49,14 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [], resetKey = 0
   const [toQuery,     setToQuery]     = useState('')
   const [fromResults, setFromResults] = useState([])
   const [toResults,   setToResults]   = useState([])
-  // Single active-field tracker avoids the 150ms blur race that made both fields respond at once
   const [activeField, setActiveField] = useState(null) // 'from' | 'to' | null
   const [fromPoint,   setFromPoint]   = useState(null)
   const [toPoint,     setToPoint]     = useState(null)
   const [locating,    setLocating]    = useState(false)
+  const [recent,      setRecent]      = useState(loadRecent)
   const fromDebounce = useRef(null)
   const toDebounce   = useRef(null)
 
-  // Clear all local state when App externally resets the route (e.g. DirectionPanel close)
   useEffect(() => {
     if (resetKey === 0) return
     setFromQuery(''); setToQuery('')
@@ -55,13 +65,11 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [], resetKey = 0
     setActiveField(null)
   }, [resetKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync to App: start route when both confirmed, clear route when either is missing
   useEffect(() => {
     if (fromPoint && toPoint) onRoute(fromPoint, toPoint)
     else onRoute(null, null)
   }, [fromPoint, toPoint]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clean up debounce timers on unmount
   useEffect(() => {
     return () => {
       clearTimeout(fromDebounce.current)
@@ -72,12 +80,20 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [], resetKey = 0
   function buildDropdown(query, nominatimResults, isFrom) {
     const items = []
     if (isFrom && query.trim()) items.push({ kind: 'myloc' })
-    matchMarkers(markers, query).forEach(m => items.push({ kind: 'marker', marker: m }))
-    nominatimResults.forEach(r => items.push({ kind: 'place', result: r }))
+
+    if (!query.trim()) {
+      // No text → show recents
+      recent.forEach(r => items.push({ kind: 'recent', point: r }))
+    } else {
+      matchMarkers(markers, query).forEach(m => items.push({ kind: 'marker', marker: m }))
+      nominatimResults.forEach(r => items.push({ kind: 'place', result: r }))
+    }
     return items
   }
 
   const selectPoint = (point, isFrom) => {
+    saveRecent(point)
+    setRecent(loadRecent())
     if (isFrom) { setFromQuery(point.name); setFromPoint(point) }
     else        { setToQuery(point.name);   setToPoint(point)   }
     setFromResults([])
@@ -87,7 +103,6 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [], resetKey = 0
     onFlyTo?.({ lat: point.lat, lng: point.lng })
   }
 
-  // Editing text always clears the saved point — prevents stale route triggers
   const handleFromChange = (e) => {
     setFromQuery(e.target.value)
     setFromPoint(null)
@@ -113,6 +128,8 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [], resetKey = 0
         const pt = await getMyLocation()
         selectPoint(pt, isFrom)
       } catch { /* denied */ } finally { setLocating(false) }
+    } else if (item.kind === 'recent') {
+      selectPoint(item.point, isFrom)
     } else if (item.kind === 'marker') {
       const m = item.marker
       selectPoint({ lat: m.lat, lng: m.lng, name: m.name }, isFrom)
@@ -135,7 +152,7 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [], resetKey = 0
       nomResults = await fetchPlaces(query)
       setRes(nomResults)
     }
-    const items = buildDropdown(query, nomResults, isFrom)
+    const items = buildDropdown(query, nomResults, isFrom).filter(i => i.kind !== 'myloc')
     const first = items.find(i => i.kind !== 'myloc')
     if (first) handleItemSelect(first, isFrom)
   }
@@ -146,14 +163,19 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [], resetKey = 0
     const tr = toResults;   setFromResults(tr);   setToResults(fromResults)
   }
 
-  const isFrom       = activeField === 'from'
+  const isFrom         = activeField === 'from'
+  const activeQuery    = isFrom ? fromQuery : toQuery
+  const activeResults  = isFrom ? fromResults : toResults
   const activeDropdown = activeField
-    ? buildDropdown(
-        isFrom ? fromQuery : toQuery,
-        isFrom ? fromResults : toResults,
-        isFrom
-      )
+    ? buildDropdown(activeQuery, activeResults, isFrom)
     : []
+
+  const removeRecent = (e, name) => {
+    e.stopPropagation()
+    const updated = loadRecent().filter(r => r.name !== name)
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(updated)) } catch { /* */ }
+    setRecent(updated)
+  }
 
   return (
     <div className="search-bar">
@@ -203,7 +225,7 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [], resetKey = 0
       {/* Dropdown */}
       {activeDropdown.length > 0 && (
         <ul className="search-results" role="listbox">
-          {activeDropdown.map((item) => {
+          {activeDropdown.map((item, idx) => {
             if (item.kind === 'myloc') return (
               <li
                 key="myloc"
@@ -213,6 +235,23 @@ export default function SearchBar({ onRoute, onFlyTo, markers = [], resetKey = 0
               >
                 <span className="result-icon">{locating ? '…' : '📍'}</span>
                 <span className="result-text">{locating ? 'Getting location…' : 'Use my location'}</span>
+              </li>
+            )
+            if (item.kind === 'recent') return (
+              <li
+                key={`recent-${item.point.name}`}
+                onMouseDown={() => handleItemSelect(item, isFrom)}
+                role="option"
+                className="result-recent"
+              >
+                <span className="result-icon result-recent-icon">🕐</span>
+                <span className="result-text result-recent-name">{item.point.name}</span>
+                <button
+                  className="result-recent-remove"
+                  onMouseDown={e => removeRecent(e, item.point.name)}
+                  aria-label="Remove from recent"
+                  title="Remove"
+                >✕</button>
               </li>
             )
             if (item.kind === 'marker') {
