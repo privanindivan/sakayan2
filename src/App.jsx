@@ -5,7 +5,7 @@ import AddMarkerForm          from './components/AddMarkerForm'
 import MarkerModal            from './components/MarkerModal'
 import DirectionPanel         from './components/DirectionPanel'
 import RouteAlternativesSheet from './components/RouteAlternativesSheet'
-import { INITIAL_MARKERS, TYPE_COLORS } from './data/sampleData'
+import { INITIAL_MARKERS, TYPE_COLORS, DURATION_FACTORS } from './data/sampleData'
 
 function WaypointNameForm({ onSave, onRetap, onCancel }) {
   const [name, setName] = useState('')
@@ -207,7 +207,9 @@ useEffect(() => { save('sakayan_markers',     markers)     }, [markers])
         geometry: alt.positions,
         color:    TYPE_COLORS[markers.find(m => m.id === pendingConnect.fromId)?.type] || '#4A90D9',
         fare:     fare ?? null,
-        duration: alt.duration ?? null,
+        duration: alt.duration != null
+          ? Math.round(alt.duration * (DURATION_FACTORS[markers.find(m => m.id === pendingConnect.fromId)?.type] ?? 1.4))
+          : null,
       },
     ])
     // Remove confirmed alt; close sheet if none left
