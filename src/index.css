@@ -207,6 +207,18 @@ html, body, #root {
 /* ============================================================
    CORNER BUTTONS (locate + add) — both small
    ============================================================ */
+.fb-corner-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+}
+.fb-btn {
+  background: #1877F2;
+  color: white;
+}
+.fb-btn:hover { background: #1565d8; }
+
 .corner-btns {
   position: absolute;
   bottom: calc(24px + env(safe-area-inset-bottom));
