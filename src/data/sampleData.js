@@ -8,6 +8,17 @@ export const TYPE_COLORS = {
   Train:        '#8E44AD',
 }
 
+// OSRM returns car-speed durations. PH public transit is slower (traffic, stops, loading).
+// These factors adjust raw OSRM seconds to realistic in-vehicle travel time.
+// Sources: TomTom 2024 (Manila worst traffic), JICA Metro Manila study, EDSA Busway research.
+export const DURATION_FACTORS = {
+  Jeep:         1.7,  // ~20–30 km/h urban; frequent stops + heavy traffic
+  Bus:          1.4,  // wider roads but still congested; fewer stops than jeep
+  'UV Express': 1.2,  // express routes, fewer stops, slightly faster
+  Tricycle:     1.9,  // local streets only; slowest mode
+  Train:        0.85, // fixed rail, no traffic; often faster than driving
+}
+
 // All sample stops clustered in Metro Manila
 export const INITIAL_MARKERS = [
   {
