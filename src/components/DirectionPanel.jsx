@@ -78,6 +78,26 @@ function segmentFare(fromId, toId, connections) {
   )
   return conn?.fare ?? null
 }
+function pathDuration(connIds, connections) {
+  const durations = connIds.map(id => connections.find(c => c.id === id)?.duration).filter(d => d != null)
+  if (!durations.length) return null
+  return durations.reduce((a, b) => a + b, 0)
+}
+function segmentDuration(fromId, toId, connections) {
+  const conn = connections.find(c =>
+    (c.fromId === fromId && c.toId === toId) ||
+    (c.fromId === toId   && c.toId === fromId)
+  )
+  return conn?.duration ?? null
+}
+function fmtDuration(secs) {
+  if (secs == null) return null
+  const mins = Math.round(secs / 60)
+  if (mins < 60) return `~${mins} min`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m ? `~${h}h ${m}m` : `~${h}h`
+}
 
 // ── Swipe-to-snap hook ─────────────────────────────────────────────────────
 function useSwipeSheet(sheetRef) {
@@ -259,9 +279,10 @@ export default function DirectionPanel({
 
         {/* All routes shown as accordion */}
         {routes.map((route, i) => {
-          const fare  = pathFare(route.connIds ?? [], connections)
-          const steps = buildSteps(route)
-          const open  = !!expanded[i]
+          const fare     = pathFare(route.connIds ?? [], connections)
+          const duration = pathDuration(route.connIds ?? [], connections)
+          const steps    = buildSteps(route)
+          const open     = !!expanded[i]
           return (
             <div key={i} className="dir-route-block">
               <button
@@ -272,6 +293,7 @@ export default function DirectionPanel({
                 <span className="dir-route-dot" style={{ background: route.color }} />
                 <span className="dir-route-title">{route.label}</span>
                 <span className="dir-route-hops">{route.stopIds.length - 1} hop{route.stopIds.length - 1 !== 1 ? 's' : ''}</span>
+                {fmtDuration(duration) && <span className="dir-route-fare">{fmtDuration(duration)}</span>}
                 {fare != null && <span className="dir-route-fare">₱{Math.round(fare)}</span>}
                 <span className="dir-route-chevron">{open ? '▲' : '▼'}</span>
               </button>
@@ -299,6 +321,9 @@ export default function DirectionPanel({
                         <div className="dir-step-body">
                           <span className="dir-ride-label" style={{ color: step.segColor }}>
                             {step.from.type}
+                            {fmtDuration(segmentDuration(step.from.id, step.to.id, connections)) && (
+                              <span className="dir-step-fare"> · {fmtDuration(segmentDuration(step.from.id, step.to.id, connections))}</span>
+                            )}
                             {segmentFare(step.from.id, step.to.id, connections) != null && (
                               <span className="dir-step-fare"> · ₱{segmentFare(step.from.id, step.to.id, connections)}</span>
                             )}
