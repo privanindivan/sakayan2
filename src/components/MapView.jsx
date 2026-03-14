@@ -219,7 +219,7 @@ export default function MapView({
           return (
             <RoadRoute
               key={conn.id}
-              route={{ id: conn.id, waypoints: [[from.lat, from.lng], [to.lat, to.lng]], color: lineColor }}
+              route={{ id: conn.id, waypoints: [[from.lat, from.lng], [to.lat, to.lng]], color: lineColor, weight: lineWeight, opacity: lineOpacity }}
             />
           )
         })}
