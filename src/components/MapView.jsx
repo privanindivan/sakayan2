@@ -9,6 +9,7 @@ import { TYPE_COLORS } from '../data/sampleData'
 
 const PHILIPPINES = [12.8797, 121.7740]
 const DEFAULT_ZOOM = 6
+const PH_BOUNDS = [[4.5, 116.0], [21.5, 127.0]]
 const GREY = '#9CA3AF'
 
 function buildIcon(color, pulse = false) {
@@ -178,6 +179,9 @@ export default function MapView({
       <MapContainer
         center={PHILIPPINES}
         zoom={DEFAULT_ZOOM}
+        minZoom={6}
+        maxBounds={PH_BOUNDS}
+        maxBoundsViscosity={1.0}
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
         attributionControl={true}
