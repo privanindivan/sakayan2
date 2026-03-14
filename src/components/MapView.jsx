@@ -205,43 +205,47 @@ export default function MapView({
           maxZoom={19}
         />
 
-        {/* Saved connections — grey by default, colored when active/focused.
-            Sorted so focused connection renders last (on top of all others). */}
-        {[...connections]
-          .sort((a, b) => {
-            const af = isConnFocused(a, focusedSegment)
-            const bf = isConnFocused(b, focusedSegment)
-            return af ? 1 : bf ? -1 : 0
-          })
-          .map(conn => {
-            const from = markers.find(m => m.id === conn.fromId)
-            const to   = markers.find(m => m.id === conn.toId)
-            if (!from || !to) return null
+        {/* Saved connections — always grey unless part of active route */}
+        {connections.map(conn => {
+          const from = markers.find(m => m.id === conn.fromId)
+          const to   = markers.find(m => m.id === conn.toId)
+          if (!from || !to) return null
 
-            const isActiveRoute = activeConnIds?.includes(conn.id)
-            const isFocused = isConnFocused(conn, focusedSegment)
+          const isActiveRoute = activeConnIds?.includes(conn.id)
+          const lineColor   = isActiveRoute ? (conn.color || TYPE_COLORS[from.type] || '#4A90D9') : GREY
+          const lineOpacity = isActiveRoute ? 1 : 0.45
 
-            const lineColor   = (isActiveRoute || isFocused)
-              ? (conn.color || TYPE_COLORS[from.type] || '#4A90D9')
-              : GREY
-            const lineWeight  = 5
-            const lineOpacity = (isActiveRoute || isFocused) ? 1 : 0.45
-
-            const positions = conn.geometry
-
-            if (positions) {
-              return (
-                <Polyline key={conn.id} positions={positions}
-                  color={lineColor} weight={lineWeight} opacity={lineOpacity} interactive={false} />
-              )
-            }
+          if (conn.geometry) {
             return (
-              <RoadRoute
-                key={conn.id}
-                route={{ id: conn.id, waypoints: [[from.lat, from.lng], [to.lat, to.lng]], color: lineColor, weight: lineWeight, opacity: lineOpacity }}
-              />
+              <Polyline key={conn.id} positions={conn.geometry}
+                color={lineColor} weight={5} opacity={lineOpacity} interactive={false} />
             )
-          })}
+          }
+          return (
+            <RoadRoute key={conn.id}
+              route={{ id: conn.id, waypoints: [[from.lat, from.lng], [to.lat, to.lng]], color: lineColor, weight: 5, opacity: lineOpacity }}
+            />
+          )
+        })}
+
+        {/* Focused connection — separate overlay mounted fresh on top so color always applies */}
+        {focusedSegment && connections.filter(conn => isConnFocused(conn, focusedSegment)).map(conn => {
+          const from = markers.find(m => m.id === conn.fromId)
+          const to   = markers.find(m => m.id === conn.toId)
+          if (!from || !to) return null
+          const lineColor = conn.color || TYPE_COLORS[from.type] || '#4A90D9'
+          if (conn.geometry) {
+            return (
+              <Polyline key={`focused-${conn.id}`} positions={conn.geometry}
+                color={lineColor} weight={5} opacity={1} interactive={false} />
+            )
+          }
+          return (
+            <RoadRoute key={`focused-${conn.id}`}
+              route={{ id: `focused-${conn.id}`, waypoints: [[from.lat, from.lng], [to.lat, to.lng]], color: lineColor, weight: 5, opacity: 1 }}
+            />
+          )
+        })}
 
         {/* Intermediate stops (waypoints) along each connection */}
         {connections.flatMap(conn => {
