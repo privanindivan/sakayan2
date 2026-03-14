@@ -271,6 +271,7 @@ export default function MarkerModal({
                         ? ` (Route ${sameStopConns.indexOf(c) + 1})`
                         : ''
                       const connFare = c.fare != null ? `₱${c.fare}` : null
+                      const connMins = c.duration != null ? `~${Math.round(c.duration / 60)} min` : null
                       const waypoints = c.waypoints || []
                       const connColor = TYPE_COLORS[other.type] || '#888'
                       return (
@@ -289,7 +290,9 @@ export default function MarkerModal({
                             <div className="connect-item-body">
                               <span className="connect-name">{other.name}{routeNum}</span>
                               <span className="connect-stop-meta">
-                                {other.type}{connFare ? ` · ${connFare}` : ''}
+                                {other.type}
+                                {connMins ? ` · ${connMins}` : ''}
+                                {connFare ? ` · ${connFare}` : ''}
                                 {waypoints.length > 0 ? ` · ${waypoints.length} stop${waypoints.length > 1 ? 's' : ''}` : ''}
                               </span>
                             </div>

@@ -169,6 +169,7 @@ export default function MapView({
   fitBoundsPoints,
   addingWaypointMode,
   pendingWpLatLng,
+  onWaypointClick,
 }) {
   const hasActiveRoute = activeStopIds && activeStopIds.length > 0
 
@@ -228,6 +229,12 @@ export default function MapView({
               key={`wp-${wp.id}`}
               position={[wp.lat, wp.lng]}
               icon={buildWaypointIcon(wpColor)}
+              eventHandlers={{
+                click: (e) => {
+                  e.originalEvent?.stopPropagation()
+                  onWaypointClick?.(conn.fromId, conn.toId)
+                }
+              }}
             >
               <Tooltip direction="top" offset={[0, -10]} opacity={1}>
                 <span style={{ fontSize: 12, fontWeight: 600 }}>{wp.name}</span>

@@ -152,6 +152,7 @@ useEffect(() => { save('sakayan_markers',     markers)     }, [markers])
                   positions: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
                   color: ALT_COLORS[i % ALT_COLORS.length],
                   distance: route.distance,
+                  duration: route.duration,
                 }))
               : [{ // fallback: straight line if OSRM returns nothing
                   id: 0,
@@ -206,6 +207,7 @@ useEffect(() => { save('sakayan_markers',     markers)     }, [markers])
         geometry: alt.positions,
         color:    TYPE_COLORS[markers.find(m => m.id === pendingConnect.fromId)?.type] || '#4A90D9',
         fare:     fare ?? null,
+        duration: alt.duration ?? null,
       },
     ])
     // Remove confirmed alt; close sheet if none left
@@ -288,6 +290,7 @@ useEffect(() => { save('sakayan_markers',     markers)     }, [markers])
         fitBoundsPoints={fitBoundsPoints}
         addingWaypointMode={!!addingWaypoint}
         pendingWpLatLng={pendingWpLatLng}
+        onWaypointClick={(fromId, toId) => setFocusedSegment({ fromId, toId })}
       />
 
       {/* Corner buttons */}
