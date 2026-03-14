@@ -66,8 +66,13 @@ function vehicleEmoji(type) {
   if (type === 'Tricycle') return '🛺'
   return '🚐'
 }
-const SPEED_KMH = { Jeepney: 25, Bus: 30, 'UV Express': 35, Tricycle: 15, Train: 60 }
+// km/h averages per vehicle type for straight-line fallback estimates
+const SPEED_KMH = { Jeep: 25, Bus: 30, 'UV Express': 35, Tricycle: 15, Train: 60 }
 const WALK_KMH  = 4.5
+// Straight-line → road-distance factors (haversine underestimates actual road length)
+const ROAD_FACTOR = 1.4
+const WALK_FACTOR = 1.3
+
 function haversineKm(a, b) {
   const R = 6371
   const dLat = (b.lat - a.lat) * Math.PI / 180
@@ -76,11 +81,19 @@ function haversineKm(a, b) {
   return R * 2 * Math.asin(Math.sqrt(s))
 }
 function estimateSecs(fromM, toM) {
-  const kmh = SPEED_KMH[fromM.type] ?? 25
-  return Math.round((haversineKm(fromM, toM) * 1.4 / kmh) * 3600)
+  return Math.round((haversineKm(fromM, toM) * ROAD_FACTOR / (SPEED_KMH[fromM.type] ?? 25)) * 3600)
 }
 function walkSecs(a, b) {
-  return Math.round((haversineKm(a, b) * 1.3 / WALK_KMH) * 3600)
+  return Math.round((haversineKm(a, b) * WALK_FACTOR / WALK_KMH) * 3600)
+}
+
+// Returns the duration (seconds) for a single connection, using stored value or estimating.
+function connDuration(conn, markers) {
+  if (conn.duration != null) return conn.duration
+  if (!markers) return null
+  const from = markers.find(m => m.id === conn.fromId)
+  const to   = markers.find(m => m.id === conn.toId)
+  return (from && to) ? estimateSecs(from, to) : null
 }
 
 function pathFare(connIds, connections) {
@@ -96,17 +109,11 @@ function segmentFare(fromId, toId, connections) {
   return conn?.fare ?? null
 }
 function pathDuration(connIds, connections, markers) {
-  const durations = connIds.map(id => {
-    const conn = connections.find(c => c.id === id)
-    if (!conn) return null
-    if (conn.duration != null) return conn.duration
-    if (markers) {
-      const from = markers.find(m => m.id === conn.fromId)
-      const to   = markers.find(m => m.id === conn.toId)
-      if (from && to) return estimateSecs(from, to)
-    }
-    return null
-  }).filter(d => d != null)
+  const durations = connIds
+    .map(id => connections.find(c => c.id === id))
+    .filter(Boolean)
+    .map(conn => connDuration(conn, markers))
+    .filter(d => d != null)
   if (!durations.length) return null
   return durations.reduce((a, b) => a + b, 0)
 }
@@ -115,14 +122,7 @@ function segmentDuration(fromId, toId, connections, markers) {
     (c.fromId === fromId && c.toId === toId) ||
     (c.fromId === toId   && c.toId === fromId)
   )
-  if (!conn) return null
-  if (conn.duration != null) return conn.duration
-  if (markers) {
-    const from = markers.find(m => m.id === fromId)
-    const to   = markers.find(m => m.id === toId)
-    if (from && to) return estimateSecs(from, to)
-  }
-  return null
+  return conn ? connDuration(conn, markers) : null
 }
 function fmtDuration(secs) {
   if (secs == null) return null
@@ -337,14 +337,17 @@ export default function DirectionPanel({
 
               {open && (
                 <div className="dir-steps">
-                  {steps.map((step, si) =>
-                    step.kind === 'walk' ? (
+                  {steps.map((step, si) => {
+                    if (step.kind === 'walk') return (
                       <div key={si} className="dir-step walk-step">
                         <span className="dir-step-ico">🚶</span>
                         <span className="dir-step-txt">{step.label}</span>
                         {step.secs > 0 && <span className="dir-step-fare">{fmtDuration(step.secs)}</span>}
                       </div>
-                    ) : (
+                    )
+                    const segDurStr  = fmtDuration(segmentDuration(step.from.id, step.to.id, connections, markers))
+                    const segFareVal = segmentFare(step.from.id, step.to.id, connections)
+                    return (
                       <div
                         key={si}
                         className="dir-step ride-step"
@@ -359,19 +362,15 @@ export default function DirectionPanel({
                         <div className="dir-step-body">
                           <span className="dir-ride-label" style={{ color: step.segColor }}>
                             {step.from.type}
-                            {fmtDuration(segmentDuration(step.from.id, step.to.id, connections, markers)) && (
-                              <span className="dir-step-fare"> · {fmtDuration(segmentDuration(step.from.id, step.to.id, connections, markers))}</span>
-                            )}
-                            {segmentFare(step.from.id, step.to.id, connections) != null && (
-                              <span className="dir-step-fare"> · ₱{segmentFare(step.from.id, step.to.id, connections)}</span>
-                            )}
+                            {segDurStr  && <span className="dir-step-fare"> · {segDurStr}</span>}
+                            {segFareVal != null && <span className="dir-step-fare"> · ₱{segFareVal}</span>}
                           </span>
                           <span className="dir-ride-route">{step.from.name} → {step.to.name}</span>
                         </div>
                         <span className="dir-step-arrow">›</span>
                       </div>
                     )
-                  )}
+                  })}
                 </div>
               )}
             </div>
