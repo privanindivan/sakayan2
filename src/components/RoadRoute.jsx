@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Polyline } from 'react-leaflet'
 
 // Double-layer polyline: white casing + colored line so routes pop against OSM tiles
-function StyledRoute({ positions, color, dashed = false }) {
+function StyledRoute({ positions, color, weight = 5, opacity = 1, dashed = false }) {
   const dash = dashed ? '8 8' : undefined
   return (
     <>
@@ -10,7 +10,7 @@ function StyledRoute({ positions, color, dashed = false }) {
       <Polyline
         positions={positions}
         color="white"
-        weight={9}
+        weight={weight + 4}
         opacity={0.9}
         dashArray={dash}
         interactive={false}
@@ -19,8 +19,8 @@ function StyledRoute({ positions, color, dashed = false }) {
       <Polyline
         positions={positions}
         color={color}
-        weight={5}
-        opacity={1}
+        weight={weight}
+        opacity={opacity}
         dashArray={dash}
         interactive={false}
       />
@@ -52,6 +52,8 @@ export default function RoadRoute({ route }) {
       <StyledRoute
         positions={route.waypoints}
         color={route.color}
+        weight={route.weight}
+        opacity={route.opacity}
         dashed
       />
     )
@@ -61,6 +63,8 @@ export default function RoadRoute({ route }) {
     <StyledRoute
       positions={positions}
       color={route.color}
+      weight={route.weight}
+      opacity={route.opacity}
     />
   )
 }

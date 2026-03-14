@@ -66,6 +66,19 @@ function vehicleEmoji(type) {
   if (type === 'Tricycle') return '🛺'
   return '🚐'
 }
+const SPEED_KMH = { Jeepney: 25, Bus: 30, 'UV Express': 35, Tricycle: 15, Train: 60 }
+function haversineKm(a, b) {
+  const R = 6371
+  const dLat = (b.lat - a.lat) * Math.PI / 180
+  const dLng = (b.lng - a.lng) * Math.PI / 180
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.asin(Math.sqrt(s))
+}
+function estimateSecs(fromM, toM) {
+  const kmh = SPEED_KMH[fromM.type] ?? 25
+  return Math.round((haversineKm(fromM, toM) * 1.4 / kmh) * 3600)
+}
+
 function pathFare(connIds, connections) {
   const fares = connIds.map(id => connections.find(c => c.id === id)?.fare).filter(f => f != null)
   if (!fares.length) return null
@@ -78,17 +91,34 @@ function segmentFare(fromId, toId, connections) {
   )
   return conn?.fare ?? null
 }
-function pathDuration(connIds, connections) {
-  const durations = connIds.map(id => connections.find(c => c.id === id)?.duration).filter(d => d != null)
+function pathDuration(connIds, connections, markers) {
+  const durations = connIds.map(id => {
+    const conn = connections.find(c => c.id === id)
+    if (!conn) return null
+    if (conn.duration != null) return conn.duration
+    if (markers) {
+      const from = markers.find(m => m.id === conn.fromId)
+      const to   = markers.find(m => m.id === conn.toId)
+      if (from && to) return estimateSecs(from, to)
+    }
+    return null
+  }).filter(d => d != null)
   if (!durations.length) return null
   return durations.reduce((a, b) => a + b, 0)
 }
-function segmentDuration(fromId, toId, connections) {
+function segmentDuration(fromId, toId, connections, markers) {
   const conn = connections.find(c =>
     (c.fromId === fromId && c.toId === toId) ||
     (c.fromId === toId   && c.toId === fromId)
   )
-  return conn?.duration ?? null
+  if (!conn) return null
+  if (conn.duration != null) return conn.duration
+  if (markers) {
+    const from = markers.find(m => m.id === fromId)
+    const to   = markers.find(m => m.id === toId)
+    if (from && to) return estimateSecs(from, to)
+  }
+  return null
 }
 function fmtDuration(secs) {
   if (secs == null) return null
@@ -280,7 +310,7 @@ export default function DirectionPanel({
         {/* All routes shown as accordion */}
         {routes.map((route, i) => {
           const fare     = pathFare(route.connIds ?? [], connections)
-          const duration = pathDuration(route.connIds ?? [], connections)
+          const duration = pathDuration(route.connIds ?? [], connections, markers)
           const steps    = buildSteps(route)
           const open     = !!expanded[i]
           return (
@@ -321,8 +351,8 @@ export default function DirectionPanel({
                         <div className="dir-step-body">
                           <span className="dir-ride-label" style={{ color: step.segColor }}>
                             {step.from.type}
-                            {fmtDuration(segmentDuration(step.from.id, step.to.id, connections)) && (
-                              <span className="dir-step-fare"> · {fmtDuration(segmentDuration(step.from.id, step.to.id, connections))}</span>
+                            {fmtDuration(segmentDuration(step.from.id, step.to.id, connections, markers)) && (
+                              <span className="dir-step-fare"> · {fmtDuration(segmentDuration(step.from.id, step.to.id, connections, markers))}</span>
                             )}
                             {segmentFare(step.from.id, step.to.id, connections) != null && (
                               <span className="dir-step-fare"> · ₱{segmentFare(step.from.id, step.to.id, connections)}</span>
