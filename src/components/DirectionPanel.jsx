@@ -67,6 +67,7 @@ function vehicleEmoji(type) {
   return '🚐'
 }
 const SPEED_KMH = { Jeepney: 25, Bus: 30, 'UV Express': 35, Tricycle: 15, Train: 60 }
+const WALK_KMH  = 4.5
 function haversineKm(a, b) {
   const R = 6371
   const dLat = (b.lat - a.lat) * Math.PI / 180
@@ -77,6 +78,9 @@ function haversineKm(a, b) {
 function estimateSecs(fromM, toM) {
   const kmh = SPEED_KMH[fromM.type] ?? 25
   return Math.round((haversineKm(fromM, toM) * 1.4 / kmh) * 3600)
+}
+function walkSecs(a, b) {
+  return Math.round((haversineKm(a, b) * 1.3 / WALK_KMH) * 3600)
 }
 
 function pathFare(connIds, connections) {
@@ -243,11 +247,11 @@ export default function DirectionPanel({
   const buildSteps = (route) => {
     const stops = route.stopIds.map(id => markers.find(m => m.id === id)).filter(Boolean)
     if (!stops.length) return []
-    const steps = [{ kind: 'walk', label: `Walk to ${stops[0].name}` }]
+    const steps = [{ kind: 'walk', label: `Walk to ${stops[0].name}`, secs: walkSecs(fromPoint, stops[0]) }]
     for (let i = 0; i < stops.length - 1; i++) {
       steps.push({ kind: 'ride', from: stops[i], to: stops[i + 1], segColor: pathColor(route.colors, i) })
     }
-    steps.push({ kind: 'walk', label: `Walk to ${toPoint.name || 'destination'}` })
+    steps.push({ kind: 'walk', label: `Walk to ${toPoint.name || 'destination'}`, secs: walkSecs(stops[stops.length - 1], toPoint) })
     return steps
   }
 
@@ -309,9 +313,12 @@ export default function DirectionPanel({
 
         {/* All routes shown as accordion */}
         {routes.map((route, i) => {
-          const fare     = pathFare(route.connIds ?? [], connections)
-          const duration = pathDuration(route.connIds ?? [], connections, markers)
-          const steps    = buildSteps(route)
+          const fare        = pathFare(route.connIds ?? [], connections)
+          const rideDur     = pathDuration(route.connIds ?? [], connections, markers)
+          const walkInSecs  = nearFrom ? walkSecs(fromPoint, nearFrom) : 0
+          const walkOutSecs = nearTo   ? walkSecs(nearTo,   toPoint)   : 0
+          const duration    = rideDur != null ? rideDur + walkInSecs + walkOutSecs : null
+          const steps       = buildSteps(route)
           const open     = !!expanded[i]
           return (
             <div key={i} className="dir-route-block">
@@ -335,6 +342,7 @@ export default function DirectionPanel({
                       <div key={si} className="dir-step walk-step">
                         <span className="dir-step-ico">🚶</span>
                         <span className="dir-step-txt">{step.label}</span>
+                        {step.secs > 0 && <span className="dir-step-fare">{fmtDuration(step.secs)}</span>}
                       </div>
                     ) : (
                       <div

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import {
   MapContainer, TileLayer, Marker, Polyline, Tooltip,
   useMapEvents, useMap,
@@ -192,42 +192,71 @@ export default function MapView({
           maxZoom={19}
         />
 
-        {/* Saved connections — grey by default, colored when part of active route or focused */}
-        {connections.map(conn => {
-          const from = markers.find(m => m.id === conn.fromId)
-          const to   = markers.find(m => m.id === conn.toId)
-          if (!from || !to) return null
+        {/* Saved connections — grey by default, colored when active/focused.
+            Sorted so focused connection renders last (on top of all others). */}
+        {[...connections]
+          .sort((a, b) => {
+            const af = focusedSegment && (
+              (a.fromId === focusedSegment.fromId && a.toId === focusedSegment.toId) ||
+              (a.fromId === focusedSegment.toId   && a.toId === focusedSegment.fromId)
+            )
+            const bf = focusedSegment && (
+              (b.fromId === focusedSegment.fromId && b.toId === focusedSegment.toId) ||
+              (b.fromId === focusedSegment.toId   && b.toId === focusedSegment.fromId)
+            )
+            return af ? 1 : bf ? -1 : 0
+          })
+          .map(conn => {
+            const from = markers.find(m => m.id === conn.fromId)
+            const to   = markers.find(m => m.id === conn.toId)
+            if (!from || !to) return null
 
+            const isActiveRoute = activeConnIds?.includes(conn.id)
+            const isFocused = focusedSegment && (
+              (conn.fromId === focusedSegment.fromId && conn.toId === focusedSegment.toId) ||
+              (conn.fromId === focusedSegment.toId   && conn.toId === focusedSegment.fromId)
+            )
+
+            const lineColor   = (isActiveRoute || isFocused)
+              ? (conn.color || TYPE_COLORS[from.type] || '#4A90D9')
+              : GREY
+            const lineWeight  = isFocused ? 9 : 5
+            const lineOpacity = isFocused ? 1 : (isActiveRoute ? 1 : 0.45)
+
+            const positions = conn.geometry
+
+            if (positions) {
+              return (
+                <Fragment key={conn.id}>
+                  {isFocused && (
+                    <Polyline positions={positions} color="#FFD700" weight={17} opacity={0.55} interactive={false} />
+                  )}
+                  <Polyline positions={positions}
+                    color={lineColor} weight={lineWeight} opacity={lineOpacity} interactive={false} />
+                </Fragment>
+              )
+            }
+            return (
+              <Fragment key={conn.id}>
+                {isFocused && (
+                  <RoadRoute route={{ id: `${conn.id}-glow`, waypoints: [[from.lat, from.lng], [to.lat, to.lng]], color: '#FFD700', weight: 17, opacity: 0.55 }} />
+                )}
+                <RoadRoute
+                  route={{ id: conn.id, waypoints: [[from.lat, from.lng], [to.lat, to.lng]], color: lineColor, weight: lineWeight, opacity: lineOpacity }}
+                />
+              </Fragment>
+            )
+          })}
+
+        {/* Intermediate stops (waypoints) along each connection */}
+        {connections.flatMap(conn => {
+          const wps = conn.waypoints || []
           const isActiveRoute = activeConnIds?.includes(conn.id)
           const isFocused = focusedSegment && (
             (conn.fromId === focusedSegment.fromId && conn.toId === focusedSegment.toId) ||
             (conn.fromId === focusedSegment.toId   && conn.toId === focusedSegment.fromId)
           )
-
-          const lineColor   = (isActiveRoute || isFocused)
-            ? (conn.color || TYPE_COLORS[from.type] || '#4A90D9')
-            : GREY
-          const lineWeight  = isFocused ? 8 : 5
-          const lineOpacity = isFocused ? 1 : (isActiveRoute ? 1 : 0.45)
-
-          if (conn.geometry) {
-            return (
-              <Polyline key={conn.id} positions={conn.geometry}
-                color={lineColor} weight={lineWeight} opacity={lineOpacity} interactive={false} />
-            )
-          }
-          return (
-            <RoadRoute
-              key={conn.id}
-              route={{ id: conn.id, waypoints: [[from.lat, from.lng], [to.lat, to.lng]], color: lineColor, weight: lineWeight, opacity: lineOpacity }}
-            />
-          )
-        })}
-
-        {/* Intermediate stops (waypoints) along each connection */}
-        {connections.flatMap(conn => {
-          const wps = conn.waypoints || []
-          const wpColor = conn.color || GREY
+          const wpColor = (isActiveRoute || isFocused) ? (conn.color || GREY) : GREY
           return wps.map(wp => (
             <Marker
               key={`wp-${wp.id}`}
